@@ -1,0 +1,39 @@
+
+class GCounter(entries: Vector[Int]) {
+  pre increment(replica: Int) {
+    replica >= 0 &&
+    replica < this.entries.size
+  }
+
+  def increment(replica: Int) = {
+    val count = this.entries.get(replica)
+    new GCounter(this.entries.write(replica, count + 1))
+  }
+
+  @recursive
+  private def computeValue(sum: Int = 0, replica: Int = 0): Int = {
+    if (replica >= 0 && replica < this.entries.size) {
+      val count = this.entries.get(replica)
+      this.computeValue(sum + count, replica + 1)
+    }
+    else
+      sum
+  }
+
+  def value() = this.computeValue()
+
+  private def max(t: Tuple[Int, Int]) = if (t.fst >= t.snd) t.fst else t.snd
+
+  def merge(that: GCounter): GCounter = {
+    val mergedEntries = this.entries.zip(that.entries).map(this.max _)
+    new GCounter(mergedEntries)
+  }
+}
+
+object GCounter {
+  proof GCounter_is_a_CRDT {
+    forall (ctr1: GCounter, ctr2: GCounter) {
+      ctr1.merge(ctr2) == ctr2.merge(ctr1)
+    }
+  }
+}

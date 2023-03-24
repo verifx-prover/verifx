@@ -1,0 +1,18 @@
+# mac
+.DS_Store
+
+# intellij idea
+*.log
+*.iml
+*.ipr
+*.iws
+.idea
+
+# other?
+.history
+.scala_dependencies
+.cache
+.cache-main
+
+#general
+*.class

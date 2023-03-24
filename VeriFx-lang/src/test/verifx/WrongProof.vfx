@@ -1,0 +1,7 @@
+object Test {
+  proof incorrectProof[T] {
+    forall (a: T, b: T) {
+      a == b
+    }
+  }
+}

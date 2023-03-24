@@ -1,0 +1,150 @@
+/*
+ * These proofs serve as unit tests for built-in collections.
+ */
+
+object BuiltInProofs {
+  def plusOne(x: Int) = x + 1
+
+  proof LList_works {
+    val l = new LList[Int]()
+    val m = new Map[Int, Int]()
+
+    val l1 = l.insert(0, 1)
+    val m1 = m.add(0, 1)
+
+    val l2 = l1.insert(1, 2)
+    val m2 = m1.add(1, 2)
+
+    val l3 = l2.insert(2, 3)
+    val m3 = m2.add(2, 3)
+
+    val l4 = l3.insert(3, 4)
+    val m4 = m3.add(3, 4)
+
+    val l5 = l4.insert(4, 5)
+    val m5 = m4.add(4, 5)
+
+    val lDel = l5.delete(2)
+    // Delete idx 2 in: 1 2 3 4 5
+    // So it becomes: 1 2 4 5 (shift elements after idx 2 one position to the left)
+    val mDel = m5.add(2, 4).add(3, 5).remove(4)
+
+    val l6 = lDel.insert(2, 33)
+    val m6 = m5.add(2, 33)
+
+    val l7 = l6.insert(5, 6)
+    val m7 = m6.add(5, 6)
+
+    l.wellFormed() &&
+    l1 == new LList(1, m1) &&
+    l1.wellFormed() &&
+    l2 == new LList(2, m2) &&
+    l2.wellFormed() &&
+    l3 == new LList(3, m3) &&
+    l3.wellFormed() &&
+    l4 == new LList(4, m4) &&
+    l4.wellFormed() &&
+    l5 == new LList(5, m5) &&
+    l5.wellFormed() &&
+    lDel == new LList(4, mDel) &&
+    lDel.wellFormed() &&
+    l6 == new LList(5, m6) &&
+    l6.wellFormed() &&
+    l7 == new LList(6, m7) &&
+    l7.wellFormed()
+  }
+
+  proof subsetOnSetWorks {
+    val s1 = new Set[Int]().add(1).add(2).add(3)
+    val s2 = new Set[Int]().add(1).add(2).add(3).add(4).add(5)
+
+    s1.subsetOf(s2) && !s2.subsetOf(s1)
+  }
+
+  proof mapOnListWorks {
+    val l = new LList[Int]().insert(0, 0).insert(1, 1).insert(2, 2).insert(3, 3)
+    l.map((v: Int) => v + 1) == new LList[Int]().insert(0, 1).insert(1, 2).insert(2, 3).insert(3, 4)
+  }
+
+  proof mapOnSetWorks {
+    val s = new Set[Tuple[String, Int]]().add(new Tuple("one", 1)).add(new Tuple("two", 2)).add(new Tuple("four", 4))
+    val takeSnd = (t: Tuple[String, Int]) => t.snd
+    s.map(takeSnd) == new Set[Int].add(1).add(2).add(4)
+  }
+
+  proof mapOnMapWorks {
+    val m = new Map[String, Int]().add("a", 1).add("b", 2).add("c", 9)
+    val plusOne = (k: String, x: Int) => x + 1
+    val biggerThanTwo = (k: String, x: Int) => (x > 2)
+
+    m.map(plusOne) == new Map[String, Int]().add("a", 2).add("b", 3).add("c", 10) &&
+    m.map(biggerThanTwo) == new Map[String, Boolean]().add("a", false).add("b", false).add("c", true)
+  }
+
+  proof mapValuesWorks {
+    val m = new Map[String, Int]().add("a", 1).add("b", 2).add("c", 9)
+    val biggerThanTwo = (x: Int) => (x > 2)
+    m.mapValues(this.plusOne _) == new Map[String, Int]().add("a", 2).add("b", 3).add("c", 10) &&
+    m.mapValues(biggerThanTwo) == new Map[String, Boolean]().add("a", false).add("b", false).add("c", true)
+  }
+
+  proof filterOnSetWorks {
+    val s = new Set[Int]().add(1).add(2).add(9).add(10)
+    s.filter((x: Int) => x != 9) == new Set[Int]().add(1).add(2).add(10)
+  }
+
+  proof filterOnMapWorks {
+    val m = new Map[String, Int]().add("a", 1).add("b", 2).add("c", 9).add("d", 10)
+    m.filter((k: String, v: Int) => v != 9) == new Map[String, Int]().add("a", 1).add("b", 2).add("d", 10)
+  }
+
+  proof keysWorks {
+    val m = new Map[String, Int]().add("a", 1).add("b", 2).add("c", 9).add("d", 10)
+    m.keys() == new Set[String]().add("a").add("b").add("d").add("c")
+  }
+
+  proof valuesWorks {
+    val m = new Map[String, Int]().add("a", 1).add("b", 2).add("c", 9).add("d", 10)
+    m.values() == new Set[Int]().add(1).add(2).add(9).add(10)
+  }
+
+  def valuesHaveNext[ID, V](values: Map[ID, V], next: Map[ID, ID], head: ID): Boolean = {
+    values.keys() != next.keys().union(next.values()).add(head)
+  }
+
+  proof toSetWorks {
+    val m = new Map[String, Int]().add("a", 1).add("b", 2).add("c", 9).add("d", 10)
+    m.toSet() == new Set[Tuple[String, Int]]().add(new Tuple("a", 1)).add(new Tuple("b", 2)).add(new Tuple("c", 9)).add(new Tuple("d", 10))
+  }
+
+  proof combinationWorks {
+    val head = "id0"
+    val next =
+      new Map[String, String]()
+        .add("id5", "id7")
+        .add("id4", "id9")
+        .add("id6", "id8")
+
+    val values = new Map[String, Int]().add("id0", 2)
+    this.valuesHaveNext(values, next, head)
+  }
+
+  proof bijectiveWorks {
+    val m1 = new Map[String, Int]().add("a", 1).add("b", 2).add("c", 9).add("d", 10)
+    val m2 = new Map[String, Int]().add("a", 1).add("b", 10).add("c", 9).add("d", 10)
+    m1.bijective() && !m2.bijective()
+  }
+
+  proof zipWorks {
+    val m1 = new Map[String, Int]().add("a", 1).add("b", 2).add("c", 9).add("d", 10)
+    val m2 = new Map[String, String]().add("b", "3").add("c", "10").add("e", "5")
+    m1.zip(m2) == new Map[String, Tuple[Int, String]]().add("b", new Tuple(2, "3")).add("c", new Tuple(9, "10"))
+  }
+
+  proof combineWorks {
+    val m1 = new Map[String, Int]().add("a", 1).add("b", 2).add("c", 9)
+    val m2 = new Map[String, Int]().add("b", 5).add("c", 3).add("d", 4)
+    val max = (x: Int, y: Int) => if (x >= y) x else y
+    m1.combine(m2, max) == new Map[String, Int]().add("b", 5).add("c", 9).add("d", 4).add("a", 1)
+  }
+}
