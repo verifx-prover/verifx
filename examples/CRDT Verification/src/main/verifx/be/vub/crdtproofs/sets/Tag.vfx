@@ -1,0 +1,1 @@
+class Tag[ID](replicaID: ID, count: Int)

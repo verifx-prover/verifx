@@ -1,0 +1,22 @@
+import be.vub.crdtproofs.lemmas.DeltaCRDT
+import be.vub.crdtproofs.lemmas.CvRDTProof1
+import be.vub.crdtproofs.delta.DotKernel
+
+class DeltaDWFlag[ID](dk: DotKernel[Boolean, ID] = new DotKernel[Boolean, ID]()) extends DeltaCRDT[DeltaDWFlag[ID]] {
+  def read(): Boolean =
+    this.dk.dots.isEmpty() // flag is enabled if there are no disable dots
+
+  def disable(dot: Dot[ID]) = {
+    val prunedKernel = this.dk.rmv(false) // optimization that deletes active dots such that the dot we will add below is the only dot
+    val addedKernel = this.dk.add(dot, false) // add a dotted true which enables the flag
+    new DeltaDWFlag(prunedKernel.merge(addedKernel))
+  }
+
+  def enable(dot: Dot[ID]) =
+    new DeltaDWFlag(this.dk.rmv(false)) // remove the dotted disables
+
+  def merge(delta: DeltaDWFlag[ID]) =
+    new DeltaDWFlag(this.dk.merge(delta.dk))
+}
+
+object DeltaDWFlag extends CvRDTProof1[DeltaDWFlag]

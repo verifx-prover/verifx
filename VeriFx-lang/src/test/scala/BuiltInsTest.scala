@@ -1,7 +1,7 @@
 import java.nio.file.Path
 
-import be.vub.kdeporre.verifx.Analysis.Proofs.Proved
-import be.vub.kdeporre.verifx.Compiler.ProgramCompiler
+import be.vub.verifx.Analysis.Proofs.Proved
+import be.vub.verifx.Compiler.ProgramCompiler
 import org.scalatest.FlatSpec
 
 class BuiltInsTest extends FlatSpec {

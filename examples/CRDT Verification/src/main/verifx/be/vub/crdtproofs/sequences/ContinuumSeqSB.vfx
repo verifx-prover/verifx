@@ -1,0 +1,79 @@
+import be.vub.crdtproofs.lemmas.CvRDT
+import be.vub.crdtproofs.lemmas.CvRDTProof2
+import be.vub.crdtproofs.sets.TwoPSetSB
+
+/*
+ * Implementation of a sequence based on the continuum,
+ * as described in Specification 20 in "A Comprehensive Study of CRDTs".
+ * The sequence is parametric in the type of the elements and the type of the identifiers.
+ * Hence, the class constructor takes a `smaller` function that compares identifiers,
+ * and an `allocateIdentifierBetween` function that allocates identifiers.
+ *
+ * Internally, the sequence keeps a 2PSet of elements and their identifiers.
+ * This differs from Specification 20 which uses a U-Set because it implements the sequence as an op-based CRDT.
+ * We implement the sequence as a state-based CRDT, hence, we cannot use U-Set (which is op-based) but use a state-based 2PSet instead.
+ * We then show that this implementation is in fact also an op-based CRDT.
+ */
+
+class Element[V, ID](value: V, identifier: ID)
+
+class ContinuumSeqSB[V, ID](smaller: (ID, ID) => Boolean,
+                            allocateIdentifierBetween: (ID, ID) => ID,
+                            elements: TwoPSetSB[Element[V, ID]] = new TwoPSetSB[Element[V, ID]]()) extends CvRDT[ContinuumSeqSB[V, ID]] {
+
+  def lookup(e: Element[V, ID]) =
+    this.elements.lookup(e)
+
+  def preBefore(x: Element[V, ID], y: Element[V, ID]) =
+    this.lookup(x) && this.lookup(y)
+
+  def before(x: Element[V, ID], y: Element[V, ID]) = {
+    val lt = this.smaller
+    lt(x.identifier, y.identifier)
+  }
+
+  def preAddBetween(a: Element[V, ID], b: V, c: Element[V, ID]) =
+    this.lookup(a) && this.lookup(c) && this.before(a, c)
+
+  def addBetween(a: Element[V, ID], b: V, c: Element[V, ID]) = {
+    val genId = this.allocateIdentifierBetween
+    new ContinuumSeqSB(
+      this.smaller,
+      this.allocateIdentifierBetween,
+      this.elements.add(
+        new Element(
+          b,
+          genId(a.identifier, c.identifier)
+        )
+      )
+    )
+  }
+
+  def preRemove(e: Element[V, ID]) =
+    this.lookup(e)
+
+  def preRemoveDownstream(e: Element[V, ID]) =
+    this.elements.added.contains(e)
+
+  def remove(e: Element[V, ID]) = {
+    new ContinuumSeqSB(
+      this.smaller,
+      this.allocateIdentifierBetween,
+      this.elements.remove(e)
+    )
+  }
+
+  def merge(that: ContinuumSeqSB[V, ID]) = {
+    new ContinuumSeqSB(
+      this.smaller,
+      this.allocateIdentifierBetween,
+      this.elements.merge(that.elements)
+    )
+  }
+
+  def compare(that: ContinuumSeqSB[V, ID]) = {
+    this.elements.compare(that.elements)
+  }
+}
+
+object ContinuumSeqSB extends CvRDTProof2[ContinuumSeqSB]

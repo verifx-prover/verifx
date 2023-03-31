@@ -1,0 +1,50 @@
+import be.vub.crdtproofs.VersionVector
+import be.vub.crdtproofs.pure.PureOpBasedCRDT
+import be.vub.crdtproofs.lemmas.PureCRDTProof
+import be.vub.crdtproofs.pure.flags.FlagOp
+
+/*
+ * Pure op-based Enable-Wins Flag CRDT.
+ * Supported operations are:
+ * - enable
+ * - disable
+ * - clear
+ *
+ * Enable wins over concurrent disable and clear operations.
+ */
+
+class PureEWFlag(polog: Set[TaggedOp[FlagOp]] = new Set[TaggedOp[FlagOp]]()) extends PureOpBasedCRDT[FlagOp, PureEWFlag] {
+  def copy(newPolog: Set[TaggedOp[FlagOp]]) = new PureEWFlag(newPolog)
+
+  def selfRedundant(op: TaggedOp[FlagOp]): Boolean =
+    op.o == new Disable() || op.o == new Clear()
+
+  def redundantBy(x: TaggedOp[FlagOp], y: TaggedOp[FlagOp]): Boolean =
+    x.t.before(y.t)
+
+  // Query method
+  def read(): Boolean =
+    this.polog.exists((op: TaggedOp[FlagOp]) => op.o == new Enable())
+}
+
+object PureEWFlag extends PureCRDTProof[FlagOp, PureEWFlag] {
+  proof PureEWFlag_works {
+    forall(t1: VersionVector, t2: VersionVector, t3: VersionVector, t4: VersionVector, t5: VersionVector, t6: VersionVector) {
+      (t1.before(t2) && t2.before(t3) && t2.before(t4) && t3.concurrent(t4) && t2.before(t5) && t2.before(t6) && t5.concurrent(t6)) =>: {
+        val flag = new PureEWFlag()
+        val enabledFlag = flag.effect(new Enable(), t1)
+        val disabledFlag = enabledFlag.effect(new Disable(), t2)
+        val concurrentFlag1 = disabledFlag.effect(new Enable(), t3).effect(new Clear(), t4)
+        val concurrentFlag2 = disabledFlag.effect(new Enable(), t5).effect(new Disable(), t6)
+
+        // enable -> disable -> enable || clear
+        //                   -> enable || disable
+        enabledFlag.read() &&
+        !disabledFlag.read() &&
+        concurrentFlag1.polog == new Set[TaggedOp[FlagOp]]().add(new TaggedOp(t3, new Enable())) &&
+        concurrentFlag1.read() &&
+        concurrentFlag2.read()
+      }
+    }
+  }
+}

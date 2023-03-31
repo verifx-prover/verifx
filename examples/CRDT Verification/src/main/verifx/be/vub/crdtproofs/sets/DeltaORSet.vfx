@@ -1,0 +1,44 @@
+import be.vub.crdtproofs.sets.Tag
+import be.vub.crdtproofs.sets.TaggedElement
+import be.vub.crdtproofs.lemmas.DeltaCRDT
+import be.vub.crdtproofs.lemmas.CvRDTProof2
+
+/*
+ * Implementation of a delta state-based Observed-Removed Set CRDT with tombstones.
+ * Based on Fig. 3a in Delta CRDT paper.
+ */
+
+class DeltaORSet[V, ID](set: Set[TaggedElement[V, ID]] = new Set[TaggedElement[V, ID]](),
+                        tombstones: Set[Tag[ID]] = new Set[Tag[ID]]()) extends DeltaCRDT[DeltaORSet[V, ID]] {
+  def add(elem: V, tag: Tag[ID]) = {
+    val taggedElem = new TaggedElement(tag, elem)
+    new DeltaORSet(
+      new Set[TaggedElement[V, ID]]().add(taggedElem), // singleton set containing the tagged element
+      new Set[Tag[ID]]()) // empty tombstone set
+  }
+
+  def remove(elem: V) = {
+    new DeltaORSet(
+      new Set[TaggedElement[V, ID]](), // empty set of elements
+      // set containing all tags we observed for `elem`:
+      this.set
+        .filter((taggedElem: TaggedElement[V, ID]) => taggedElem.element == elem) // keep only entries for this element
+        .map((taggedElem: TaggedElement[V, ID]) => taggedElem.tag)) // keep only the tags
+  }
+
+  def elements() = {
+    this.set
+      .filter((taggedElem: TaggedElement[V, ID]) => !this.tombstones.contains(taggedElem.tag)) // keep only tagged elements whose tag does not occur in the tombstones
+      .map((taggedElem: TaggedElement[V, ID]) => taggedElem.element) // keep only the element, i.e. remove the tags
+  }
+
+  def contains(elem: V) = this.elements().contains(elem)
+
+  def merge(delta: DeltaORSet[V, ID]) = {
+    new DeltaORSet(
+      this.set.union(delta.set),
+      this.tombstones.union(delta.tombstones))
+  }
+}
+
+object DeltaORSet extends CvRDTProof2[DeltaORSet]

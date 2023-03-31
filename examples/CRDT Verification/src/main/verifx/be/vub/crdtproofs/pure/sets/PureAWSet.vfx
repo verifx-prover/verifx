@@ -1,0 +1,47 @@
+import be.vub.crdtproofs.VersionVector
+import be.vub.crdtproofs.pure.PureOpBasedCRDT
+import be.vub.crdtproofs.lemmas.PureCRDTProof1
+import be.vub.crdtproofs.pure.sets.SetOp
+
+/*
+ * Implementation of a pure op-based add-wins set CRDT,
+ * following the specification from figure 8 in:
+ *   Baquero, Carlos, Paulo Sérgio Almeida, and Ali Shoker.
+ *   "Pure operation-based replicated data types."
+ *   arXiv preprint arXiv:1710.04469 (2017).
+ *
+ * Supports three operations:
+ * - add(x): adds element `x` to the set
+ * - rmv(x): removes element `x` from the set
+ * - clear: clears the entire set
+ *
+ * Only `add(x)` operations are stored in the PO-Log
+ * because `clear` and `remove` are self redundant.
+ */
+
+class PureAWSet[V](polog: Set[TaggedOp[SetOp[V]]]) extends PureOpBasedCRDT[SetOp[V], PureAWSet[V]] {
+  def copy(newPolog: Set[TaggedOp[SetOp[V]]]) =
+    new PureAWSet(newPolog)
+
+  def selfRedundant(op: TaggedOp[SetOp[V]]): Boolean = op.o match {
+    case _: Clear[V] => true
+    case _: Rmv[V] => true
+    case _ => false
+  }
+
+  def redundantBy(x: TaggedOp[SetOp[V]], y: TaggedOp[SetOp[V]]): Boolean = {
+    // We know that `x.o` is an `Add` operation
+    // because the log only stores add operations
+    x.t.before(y.t) &&
+    (y.o match {
+      case _: Clear[V] => true
+      case Add(elem) => elem == x.o.asInstanceOf[Add[V]].elem
+      case Rmv(elem) => elem == x.o.asInstanceOf[Add[V]].elem
+    })
+  }
+
+  def contains(elem: V): Boolean =
+    this.polog.exists((op: TaggedOp[SetOp[V]]) => op.o.asInstanceOf[Add[V]].elem == elem) // we know that the PO-Log only stores add operations
+}
+
+object PureAWSet extends PureCRDTProof1[SetOp, PureAWSet]

@@ -1,0 +1,51 @@
+import be.vub.crdtproofs.lemmas.CvRDT
+import be.vub.crdtproofs.lemmas.CvRDTProof2
+import be.vub.crdtproofs.registers.LWWRegister
+import be.vub.crdtproofs.LamportClock
+
+/*
+ * Implementation of a Grow-Only Map CRDT.
+ * `add` can be used to add new key-value pairs or to overwrite the value of an existing entry.
+ * Internally, the state maps keys to a Last-Writer-Wins Register of values.
+ * Hence, if two values are written concurrently to the same key, one will take precedence over the other.
+ */
+class GMap[K, V](entries: Map[K, LWWRegister[V]]) extends CvRDT[GMap[K, V]] {
+  def contains(key: K) = {
+    this.entries.contains(key)
+  }
+
+  pre get(key: K) {
+    this.contains(key)
+  }
+
+  def get(key: K): V = this.entries.get(key).value
+
+  def add(key: K, value: V, timestamp: LamportClock) = {
+    val reg =
+      if (this.entries.contains(key))
+        this.entries.get(key).assign(value, timestamp)
+      else
+        new LWWRegister(value, timestamp)
+
+    new GMap(this.entries.add(key, reg))
+  }
+
+  def merge(that: GMap[K, V]) = {
+    // To merge 2 GMaps we make a new map that contains all entries from both maps.
+    // If a key is defined in both maps, we merge their values (which are LWWRegisters).
+    // This guarantees convergence since we take the "union" of the keys (and union is commutative)
+    // and we merge the LWWRegisters (hence the values also converge).
+    val combinedEntries = this.entries.combine(that.entries, (reg1: LWWRegister[V], reg2: LWWRegister[V]) => reg1.merge(reg2))
+    new GMap(combinedEntries)
+  }
+
+  // x <= y iff x.keys() subset of y.keys() AND all values of x <= values of y
+  def compare(that: GMap[K, V]) = {
+    this.entries.keys().subsetOf(that.entries.keys()) &&
+    (this.entries.zip(that.entries))
+      .values()
+      .forall((reg: Tuple[LWWRegister[V], LWWRegister[V]]) => reg.fst.compare(reg.snd))
+  }
+}
+
+object GMap extends CvRDTProof2[GMap]

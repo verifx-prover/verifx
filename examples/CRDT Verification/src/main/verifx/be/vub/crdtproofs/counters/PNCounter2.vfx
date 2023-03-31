@@ -1,0 +1,49 @@
+import be.vub.crdtproofs.lemmas.CvRDT
+import be.vub.crdtproofs.lemmas.CvRDTProof
+
+class PNCounter2(p: Vector[Int], n: Vector[Int]) extends CvRDT[PNCounter2] {
+  pre increment(replica: Int) {
+    replica >= 0 && replica < this.p.size
+  }
+
+  def increment(replica: Int) = {
+    val count = this.p.get(replica)
+    new PNCounter2(this.p.write(replica, count + 1), this.n)
+  }
+
+  pre decrement(replica: Int) {
+    replica >= 0 && replica < this.n.size
+  }
+
+  def decrement(replica: Int) = {
+    val count = this.n.get(replica)
+    new PNCounter2(this.p, this.n.write(replica, count + 1))
+  }
+
+  @recursive
+  private def sumVector(v: Vector[Int], sum: Int = 0, replica: Int = 0): Int = {
+    if (replica >= 0 && replica < v.size) {
+      val count = v.get(replica)
+      this.sumVector(v, sum + count, replica + 1)
+    }
+    else
+      sum
+  }
+
+  def value() = this.sumVector(this.p) - this.sumVector(this.n)
+
+  def merge(that: PNCounter2) = {
+    val max = (t: Tuple[Int, Int]) => if (t.fst >= t.snd) t.fst else t.snd
+    val mergedP = this.p.zip(that.p).map(max)
+    val mergedN = this.n.zip(that.n).map(max)
+    new PNCounter2(mergedP, mergedN)
+  }
+
+  private def compareVectors(x: Vector[Int], y: Vector[Int]): Boolean =
+    x.zip(y).forall((tup: Tuple[Int, Int]) => tup.fst <= tup.snd)
+
+  def compare(that: PNCounter2) =
+    this.compareVectors(this.p, that.p) && this.compareVectors(this.n, that.n)
+}
+
+object PNCounter2 extends CvRDTProof[PNCounter2]

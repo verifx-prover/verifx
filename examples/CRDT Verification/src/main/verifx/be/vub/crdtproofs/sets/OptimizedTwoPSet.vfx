@@ -1,0 +1,36 @@
+import be.vub.crdtproofs.lemmas.CvRDT
+import be.vub.crdtproofs.lemmas.CvRDTProof1
+
+/*
+ * We define an optimized 2PSet such that when an element is removed,
+ * it is added to the `removed` set and removed from the `added` set.
+ * Care is taken not to add elements to the `add` set if they are already in the `removed` set.
+ * An element is in the set if it is in the added set.
+ */
+class OptimizedTwoPSet[V](added: Set[V] = new Set[V](), removed: Set[V] = new Set[V]()) extends CvRDT[OptimizedTwoPSet[V]] {
+  override def reachable() = this.added.intersect(this.removed).isEmpty()
+
+  def lookup(element: V) = this.added.contains(element) //&& !this.removed.contains(element)
+  def add(element: V) = {
+    if (this.removed.contains(element))
+      this
+    else
+      new OptimizedTwoPSet(this.added.add(element), this.removed)
+  }
+
+  def preRemove(element: V) = this.lookup(element)
+  def remove(element: V) = new OptimizedTwoPSet(this.added.remove(element), this.removed.add(element))
+
+  def merge(that: OptimizedTwoPSet[V]) = {
+    val mergedAdded = this.added.union(that.added)
+    val mergedRemoved = this.removed.union(that.removed)
+    new OptimizedTwoPSet(mergedAdded.diff(mergedRemoved), mergedRemoved)
+  }
+
+  def compare(that: OptimizedTwoPSet[V]) = {
+    this.added.subsetOf(that.added) &&
+    this.removed.subsetOf(that.removed)
+  }
+}
+
+object OptimizedTwoPSet extends CvRDTProof1[OptimizedTwoPSet]

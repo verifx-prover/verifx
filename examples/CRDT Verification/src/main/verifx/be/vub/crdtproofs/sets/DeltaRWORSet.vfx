@@ -1,0 +1,42 @@
+import be.vub.crdtproofs.delta.DotKernel
+import be.vub.crdtproofs.lemmas.DeltaCRDT
+import be.vub.crdtproofs.lemmas.CvRDTProof2
+
+/*
+ * Implementation of an optimized delta state-based Remove-Wins Observed-Removed Set CRDT.
+ * The implementation is based on Carlos Baquero's C++ implementation:
+ *   https://github.com/CBaquero/delta-enabled-crdts/blob/master/delta-crdts.cc
+ */
+
+class DeltaRWORSet[V, ID](dk: DotKernel[Tuple[V, Boolean], ID] = new DotKernel[Tuple[V, Boolean], ID]()) extends DeltaCRDT[DeltaRWORSet[V, ID]] {
+  def add(elem: V, dot: Dot[ID]) = {
+    val rmvKernel = this.dk.rmv(new Tuple(elem, true)) // remove any observed add token
+    val rmvKernel2 = rmvKernel.merge(this.dk.rmv(new Tuple(elem, false))) // remove any observed remove token
+    val addedKernel = rmvKernel2.merge(this.dk.add(dot, new Tuple(elem, true))) // add an add token
+    new DeltaRWORSet(addedKernel)
+  }
+
+  def remove(elem: V, dot: Dot[ID]) = {
+    val rmvKernel = this.dk.rmv(new Tuple(elem, true)) // remove any observed add token
+    val rmvKernel2 = rmvKernel.merge(this.dk.rmv(new Tuple(elem, false))) // remove any observed remove token
+    val addedKernel = rmvKernel2.merge(this.dk.add(dot, new Tuple(elem, false))) // add a remove token
+    new DeltaRWORSet(addedKernel)
+  }
+
+  def elements() =
+    this
+      .dk
+      .read()
+      .filter(
+        (t: Tuple[V, Boolean]) =>
+          t.snd && !this.dk.read().contains(new Tuple(t.fst, false))) // keep only the elements that have an add token and no remove token
+      .map((t: Tuple[V, Boolean]) => t.fst) // keep only the values
+
+  def contains(elem: V) =
+    this.elements().contains(elem)
+
+  def merge(delta: DeltaRWORSet[V, ID]) =
+    new DeltaRWORSet(this.dk.merge(delta.dk))
+}
+
+object DeltaRWORSet extends CvRDTProof2[DeltaRWORSet]

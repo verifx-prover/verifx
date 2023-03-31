@@ -1,0 +1,23 @@
+// T is the type of the concrete implementation, e.g. `GCounter`
+trait CvRDT[T <: CvRDT[T]] {
+  // Excludes states that are not reachable in practice.
+  // Returns true if the state is reachable, false otherwise.
+  def reachable(): Boolean = true
+
+  // Exclude replicas that are not compatible
+  // e.g. OptORSet keeps a summary vector
+  //      every replica must have a summary vector of the same size
+  //      because it assumes a fixed number of replicas!
+  def compatible(that: T): Boolean = true
+
+  // Returns the LUB of `this` and `that`
+  def merge(that: T): T
+
+  // True if `this <= that`
+  def compare(that: T): Boolean
+
+  // Default implementation of `equals`.
+  // `a equals b` iff `a <= b && b <= a` according to `compare`.
+  def equals(that: T): Boolean =
+    this.asInstanceOf[T].compare(that) && that.compare(this.asInstanceOf[T])
+}

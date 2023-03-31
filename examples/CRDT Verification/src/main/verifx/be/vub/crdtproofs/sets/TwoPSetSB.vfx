@@ -1,0 +1,32 @@
+import be.vub.crdtproofs.lemmas.CvRDT
+import be.vub.crdtproofs.lemmas.CvRDTProof1
+
+class TwoPSetSB[V](added: Set[V] = new Set[V](), removed: Set[V] = new Set[V]()) extends CvRDT[TwoPSetSB[V]] {
+  def lookup(element: V) = this.added.contains(element) && !this.removed.contains(element)
+  def add(element: V) = new TwoPSetSB(this.added.add(element), this.removed)
+
+  def preRemove(element: V) = this.lookup(element)
+  def remove(element: V) = new TwoPSetSB(this.added, this.removed.add(element))
+
+  def merge(that: TwoPSetSB[V]) = {
+    val mergedAdded = this.added.union(that.added)
+    val mergedRemoved = this.removed.union(that.removed)
+    new TwoPSetSB(mergedAdded, mergedRemoved)
+  }
+
+  def compare(that: TwoPSetSB[V]) = {
+    this.added.subsetOf(that.added) || // This is wrong in the paper, should be an AND
+    this.removed.subsetOf(that.removed)
+  }
+
+  // The `forall` method checks that the given predicate holds for all elements that are in the set
+  // This method is used by TwoPTwoPGraph
+  def forall(f: V => Boolean) =
+    this.added.diff(this.removed).forall(f)
+
+  // This method is used by RGA
+  def filter(f: V => Boolean) =
+    this.added.diff(this.removed).filter(f)
+}
+
+object TwoPSetSB extends CvRDTProof1[TwoPSetSB]

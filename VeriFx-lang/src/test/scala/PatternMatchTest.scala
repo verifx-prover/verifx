@@ -1,6 +1,6 @@
-import be.vub.kdeporre.verifx.Compiler.Plugins.{JavaScriptCompilerPlugin, ScalaCompilerPlugin, Z3CompilerPlugin}
-import be.vub.kdeporre.verifx.Compiler.ProgramCompiler
-import be.vub.kdeporre.verifx.{MatchError, ParseError, TypeError}
+import be.vub.verifx.Compiler.Plugins.{JavaScriptCompilerPlugin, ScalaCompilerPlugin, Z3CompilerPlugin}
+import be.vub.verifx.Compiler.ProgramCompiler
+import be.vub.verifx.{MatchError, ParseError, TypeError}
 import org.scalatest.FlatSpec
 
 class PatternMatchTest extends FlatSpec {

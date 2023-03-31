@@ -1,0 +1,17 @@
+// sync, get, contains, replicas
+class VersionMap[ID](vmap: Map[ID, Int] = new Map[ID, Int]()) {
+  def contains(id: ID) = this.vmap.contains(id)
+  def get(id: ID) = this.vmap.getOrElse(id, 0)
+  def replicas() = this.vmap.keys()
+
+  def increment(replica: ID) = {
+    val count = this.get(replica)
+    new VersionMap(this.vmap.add(replica, count + 1))
+  }
+
+  private def max(x: Int, y: Int) = if (x >= y) x else y
+  def sync(that: VersionMap[ID]) = new VersionMap(this.vmap.combine(that.vmap, this.max _))
+
+  def filter(f: (ID, Int) => Boolean) =
+    new VersionMap(this.vmap.filter(f))
+}

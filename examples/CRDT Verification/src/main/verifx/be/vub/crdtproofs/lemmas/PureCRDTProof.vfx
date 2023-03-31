@@ -1,0 +1,25 @@
+import be.vub.crdtproofs.pure.PureOpBasedCRDT
+
+trait PureCRDTProof[Op, T <: PureOpBasedCRDT[Op, T]] {
+  /*
+  proof is_a_CmRDT {
+    forall (s1: T, s2: T, x: Op, timeX: VersionVector, y: Op, timeY: VersionVector) {
+      // The operations must be concurrent
+      ( s1.equals(s2) && timeX.concurrent(timeY) ) =>: {
+        // The effectors must commute
+        s1.effect(x, timeX).effect(y, timeY).equals(s2.effect(y, timeY).effect(x, timeX))
+      }
+    }
+  }
+  */
+
+  proof is_a_CmRDT {
+    forall (s: T, x: Op, timeX: VersionVector, y: Op, timeY: VersionVector) {
+      // The operations must be concurrent
+      timeX.concurrent(timeY) =>: {
+        // The effectors must commute
+        s.effect(x, timeX).effect(y, timeY) == s.effect(y, timeY).effect(x, timeX)
+      }
+    }
+  }
+}

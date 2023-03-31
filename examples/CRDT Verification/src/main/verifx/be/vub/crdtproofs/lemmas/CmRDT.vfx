@@ -1,0 +1,40 @@
+trait CmRDT[Op, Msg, T <: CmRDT[Op, Msg, T]] {
+  // Excludes states that are not reachable in practice.
+  // Returns true if the state is reachable, false otherwise.
+  def reachable(): Boolean = true
+
+  // Checks if two operations could be invoked concurrently.
+  // E.g. the USet CRDT assumes that every element is unique
+  //      hence, concurrent operations cannot add the same element.
+  def compatible(x: Msg, y: Msg): Boolean = true
+
+  // Checks if two states are compatible.
+  // E.g. ORSet needs to generate unique tags.
+  //      To this end, every replica has a unique ID which is used to generate new tags.
+  //      Hence, replicas must be compatible, i.e. have different IDs.
+  def compatibleS(that: T): Boolean = true
+
+  // Checks if the given operation could be generated in this state.
+  def enabledSrc(op: Op): Boolean = true
+
+  // Prepares a message to broadcast to all replicas
+  def prepare(op: Op): Msg
+
+  // Checks if the given operation could be applied (downstream) on this state.
+  def enabledDown(msg: Msg): Boolean = true
+
+  // Applies an incoming message (downstream) and returns the updated state
+  def effect(msg: Msg): T
+
+  // Applies an incoming message (downstream) but only if its downstream precondition holds
+  def tryEffect(msg: Msg): T = {
+    if (this.enabledDown(msg))
+      this.effect(msg)
+    else
+      this.asInstanceOf[T] // operation executes only if its downstream precondition is true
+  }
+
+  def equals(that: T): Boolean = {
+    this == that
+  }
+}

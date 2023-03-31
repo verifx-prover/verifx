@@ -1,0 +1,18 @@
+class LamportClock(replica: Int, counter: Int) {
+  def increment() = new LamportClock(this.replica, this.counter + 1)
+
+  def sync(that: LamportClock) = {
+    val maxTime = if (this.counter >= that.counter) this.counter else that.counter
+    new LamportClock(this.replica, maxTime + 1)
+  }
+
+  // for two lamport clocks C1 and C2,
+  // C1 is smaller than C2 if its counter is smaller, our they have the same counter but the replica ID is smaller
+  // IMPORTANT: if C1 is smaller than C2 that does not mean that C1 happened-before C2.
+  //            However, if C1 happened-before C2 then C1 will be smaller than C2.
+  def smaller(that: LamportClock) = (this.counter < that.counter) || (this.counter == that.counter && this.replica < that.replica)
+
+  def smallerOrEqual(that: LamportClock) = (this == that) || this.smaller(that)
+
+  def bigger(that: LamportClock) = (this.counter > that.counter) || (this.counter == that.counter && this.replica > that.replica)
+}

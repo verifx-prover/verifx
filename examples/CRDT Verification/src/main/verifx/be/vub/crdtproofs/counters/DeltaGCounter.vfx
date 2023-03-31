@@ -1,0 +1,45 @@
+import be.vub.crdtproofs.lemmas.DeltaCRDT
+import be.vub.crdtproofs.lemmas.CvRDTProof1
+
+/*
+ * Implementation of a delta state-based grow-only counter CRDT.
+ * Mutators (i.e. `increment`) return a delta state.
+ * Those delta states should be disseminated to all replicas (including themselves) and joined into the state using merge.
+ */
+
+class DeltaGCounter[Identifier](increments: Map[Identifier, Int] = new Map[Identifier, Int]()) extends DeltaCRDT[DeltaGCounter[Identifier]] {
+  // Increment operation issued by `replica`
+  // returns a delta to be joined into every replica's state using `merge`
+  def increment(replica: Identifier) = {
+    val emptyMap = new Map[Identifier, Int]()
+    val newCount = this.increments.getOrElse(replica, 0) + 1
+    val deltaMap = emptyMap.add(replica, newCount)
+    new DeltaGCounter(deltaMap)
+  }
+
+  @recursive
+  private def computeValue(counts: Vector[Int], sum: Int = 0, idx: Int = 0): Int = {
+    if (idx >= 0 && idx < counts.size) {
+      val count = counts.get(idx)
+      this.computeValue(counts, sum + count, idx + 1)
+    }
+    else
+      sum
+  }
+
+  // We can't iterate over the `increments` map because we don't know all replica identifiers
+  // so require the caller to provide a vector of all the replica identifiers
+  def value(allReplicas: Vector[Identifier]) = {
+    val replicaCounts = allReplicas.map((replica: Identifier) => this.increments.getOrElse(replica, 0))
+    this.computeValue(replicaCounts)
+  }
+
+  // Merge this state with the incoming delta state
+  def merge(delta: DeltaGCounter[Identifier]) = {
+    val max = (x: Int, y: Int) => if (x >= y) x else y
+    val newMap = this.increments.combine(delta.increments, max)
+    new DeltaGCounter(newMap)
+  }
+}
+
+object DeltaGCounter extends CvRDTProof1[DeltaGCounter]

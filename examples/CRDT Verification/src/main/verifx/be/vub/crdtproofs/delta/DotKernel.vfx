@@ -1,0 +1,90 @@
+import be.vub.crdtproofs.lemmas.DeltaCRDT
+import be.vub.crdtproofs.lemmas.CvRDTProof1
+
+class Dot[ID](replica: ID, count: Int)
+class DottedValue[V, ID](dot: Dot[ID], value: V)
+
+class DotContext[V, ID](cc: Set[Dot[ID]]) {
+  def merge(delta: DotContext[V, ID]) =
+    this.cc.union(delta.cc)
+}
+
+class DotKernel[V, ID](dots: Set[DottedValue[V, ID]] = new Set[DottedValue[V, ID]](),
+                       ctx: Set[Dot[ID]] = new Set[Dot[ID]]()) {
+  def merge(delta: DotKernel[V, ID]) = {
+    val commonDots = this.dots.intersect(delta.dots)
+    val keepValsNotInCtx = (s: Set[DottedValue[V, ID]], ctx: Set[Dot[ID]]) => s.filter((dotVal: DottedValue[V, ID]) => !ctx.contains(dotVal.dot))
+    val myValsNotInDeltaContext = keepValsNotInCtx(this.dots, delta.ctx)
+    val deltaValsNotInMyContext = keepValsNotInCtx(delta.dots, this.ctx)
+
+    new DotKernel(
+      commonDots.union(myValsNotInDeltaContext).union(deltaValsNotInMyContext),
+      this.ctx.union(delta.ctx)
+    )
+  }
+
+  def read() =
+    this.dots.map((v: DottedValue[V, ID]) => v.value)
+
+  def add(dot: Dot[ID], value: V) = {
+    new DotKernel(
+      new Set[DottedValue[V, ID]]().add(new DottedValue(dot, value)), // singleton set containing the dotted value
+      new Set[Dot[ID]]().add(dot) // causal context containing this dot
+    )
+  }
+
+  // Is the same as calling `add` for each dot and value in the set
+  def addSeveral(dottedValues: Set[DottedValue[V, ID]]) = {
+    new DotKernel(
+      dottedValues, // set of dotted values
+      dottedValues.map((dottedVal: DottedValue[V, ID]) => dottedVal.dot) // causal context containing the dots
+    )
+  }
+
+  // Removes all dots matching the value
+  def rmv(value: V) = {
+    new DotKernel(
+      new Set[DottedValue[V, ID]](), // empty set of dotted values
+      // causal context of removed dots (i.e. all the dots that match the value)
+      this
+        .dots
+        .filter((dotVal: DottedValue[V, ID]) => dotVal.value == value) // keep only dots for this value
+        .map((dotVal: DottedValue[V, ID]) => dotVal.dot) // strip the value
+    )
+  }
+
+  // Removes a set of dots
+  def rmvDots(ds: Set[Dot[ID]]) = {
+    // to remove the dots we remove them from the dotted values and add them to the causal context
+    // but we need to be careful only to remove dots that are present in the set of dotted values
+    val cc = ds.filter((dot: Dot[ID]) => this.dots.exists((dottedVal: DottedValue[V, ID]) => dottedVal.dot == dot))
+    new DotKernel(
+      new Set[DottedValue[V, ID]](),
+      cc
+    )
+  }
+
+  /*
+  // remove a dot
+  def rmvDot(dot: Dot[ID]) = {
+    val cc =
+      if (this.dots.exists((dottedVal: DottedValue[V, ID]) => dottedVal.dot == dot))
+        new Set[Dot[ID]]().add(dot)
+      else
+        new Set[Dot[ID]]()
+
+    new DotKernel(
+      new Set[DottedValue[V, ID]](),
+      cc
+    )
+  }
+  */
+
+  // remove all dots
+  def rmvAll() = {
+    new DotKernel(
+      new Set[DottedValue[V, ID]](),
+      this.dots.map((dotVal: DottedValue[V, ID]) => dotVal.dot) // remember all removed dots in the causal context
+    )
+  }
+}

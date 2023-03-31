@@ -1,5 +1,5 @@
 name := "verifx"
-organization := "be.vub.kdeporre"
+organization := "be.vub"
 version := "1.0.0"
 
 scalaVersion := "2.13.1"
@@ -17,7 +17,7 @@ libraryDependencies ++= Seq(
 assemblyJarName in assembly := "verifx.jar"
 target in assembly := file("out/")
 test in assembly := {} // don't run tests
-mainClass in assembly := Some("be.vub.kdeporre.verifx.ProofRunner")
+mainClass in assembly := Some("be.vub.verifx.ProofRunner")
 
 assemblyMergeStrategy in assembly := {
   case PathList("META-INF", "MANIFEST.MF") => MergeStrategy.discard

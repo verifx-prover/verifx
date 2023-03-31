@@ -1,0 +1,8 @@
+import be.vub.crdtproofs.lemmas.CvRDT
+
+trait DeltaCRDT[T <: DeltaCRDT[T]] extends CvRDT[T] {
+  // In contrast to the original state-based CRDTs, the Delta CRDT paper does not define a `compare` method
+  // so we just put it on false and override equality to check for structural equality
+  def compare(that: T): Boolean = false // not used because we override `equals`
+  override def equals(that: T): Boolean = this.asInstanceOf[T] == that // structural equality
+}

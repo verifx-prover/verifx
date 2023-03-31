@@ -1,0 +1,5 @@
+object SetOps {
+  enum SetOp[V] {
+    Add(elem: V) | Rmv(elem: V) | Clear()
+  }
+}

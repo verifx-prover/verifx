@@ -1,0 +1,79 @@
+import be.vub.crdtproofs.lemmas.CvRDT
+import be.vub.crdtproofs.lemmas.CvRDTProof2
+import be.vub.crdtproofs.VersionVector
+
+class MVRegister[V, Time](before: (Time, Time) => Boolean,
+                           values: Set[Tuple[V, Time]] = new Set[Tuple[V, Time]]()) extends CvRDT[MVRegister[V, Time]] {
+
+  // Define some helper functions regarding time based on `before`
+  private def concurrent(t1: Time, t2: Time) = !this.before(t1, t2) && !this.before(t2, t1) && t1 != t2
+  private def beforeOrEqual(t1: Time, t2: Time) = this.before(t1, t2) || t1 == t2
+  private def afterOrEqual(t1: Time, t2: Time) = this.before(t2, t1) || t1 == t2
+
+  override def reachable() = {
+    // Encode the assumptions that must be true for the logical clock being used
+    forall (t1: Time, t2: Time) {
+      this.before(t1, t2) =>: !this.before(t2, t1)
+    } &&
+    forall (t1: Time) {
+      !this.before(t1, t1)
+    } &&
+    forall (t1: Time, t2: Time, t3: Time) {
+      (this.before(t1, t2) && this.before(t2, t3)) =>: this.before(t1, t3) // time must be transitive
+    } &&
+    // Now we encode the fact that all values contained by the register were written concurrently (or at the same time, e.g. by using `assignMany`)
+    this.values.forall((t1: Tuple[V, Time]) => {
+      this.values.forall((t2: Tuple[V, Time]) => {
+        t1.snd == t2.snd || this.concurrent(t1.snd, t2.snd)
+      })
+    })
+  }
+
+  override def compatible(that: MVRegister[V, Time]): Boolean = {
+    this.before == that.before // replicas must have the same notion of time
+  }
+
+  def assign(v: V, timestamp: Time) = {
+    val newValue = new Set[Tuple[V, Time]]().add(new Tuple(v, timestamp))
+    new MVRegister(this.before, newValue)
+  }
+
+  def assignMany(vs: Set[V], timestamp: Time) = {
+    val stampedValues = vs.map((v: V) => new Tuple(v, timestamp))
+    new MVRegister(this.before, stampedValues)
+  }
+
+  def value(): Set[V] = this.values.map((t: Tuple[V, Time]) => t.fst)
+
+  private def keepLatest(that: MVRegister[V, Time]) = {
+    this.values.filter((x: Tuple[V, Time]) => {
+      val v = x.snd
+      that.values.forall((y: Tuple[V, Time]) => {
+        val w = y.snd
+        this.concurrent(v, w) || this.afterOrEqual(v, w)
+      })
+    })
+  }
+
+  def merge(that: MVRegister[V, Time]) = {
+    val myLatestValues = this.keepLatest(that)
+    val hisLatestValues = that.keepLatest(this)
+    val mergedValues = myLatestValues.union(hisLatestValues)
+
+    new MVRegister(this.before, mergedValues)
+  }
+
+  def compare(that: MVRegister[V, Time]) = {
+    this.values.forall((x: Tuple[V, Time]) => {
+      that.values.forall((y: Tuple[V, Time]) => {
+        this.beforeOrEqual(x.snd, y.snd)
+      })
+    })
+  }
+
+  override def equals(that: MVRegister[V, Time]): Boolean = {
+    this == that
+  }
+}
+
+object MVRegister extends CvRDTProof2[MVRegister]

@@ -1,0 +1,5 @@
+object FlagOps {
+  enum FlagOp {
+    Enable() | Clear() | Disable()
+  }
+}

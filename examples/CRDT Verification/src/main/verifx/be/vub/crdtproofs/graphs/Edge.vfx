@@ -1,0 +1,1 @@
+class Edge[V](from: V, to: V)

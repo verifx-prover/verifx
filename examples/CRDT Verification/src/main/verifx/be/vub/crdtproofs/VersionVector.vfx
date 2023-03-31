@@ -1,0 +1,26 @@
+class VersionVector(vector: Vector[Int]) {
+  def increment(replica: Int) = {
+    val count = this.vector.get(replica)
+    new VersionVector(this.vector.write(replica, count + 1))
+  }
+
+  def before(that: VersionVector) = {
+    val vs = this.vector.zip(that.vector)
+    vs.forall((counts: Tuple[Int, Int]) => counts.fst <= counts.snd) &&
+    vs.exists((counts: Tuple[Int, Int]) => counts.fst < counts.snd)
+  }
+  def beforeOrEqual(that: VersionVector) = this == that || this.before(that)
+
+  def after(that: VersionVector) = that.before(this)
+  def afterOrEqual(that: VersionVector) = this == that || this.after(that)
+
+  def concurrent(that: VersionVector) =
+    this != that && !this.before(that) && !that.before(this)
+
+  private def max(t: Tuple[Int, Int]) = if (t.fst >= t.snd) t.fst else t.snd
+
+  def sync(that: VersionVector) = {
+    val newVector = this.vector.zip(that.vector).map(this.max _)
+    new VersionVector(newVector)
+  }
+}

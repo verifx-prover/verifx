@@ -1,6 +1,6 @@
-import be.vub.kdeporre.verifx.Compiler.Plugins.{ScalaCompilerPlugin, Z3CompilerPlugin}
-import be.vub.kdeporre.verifx.Compiler.ProgramCompiler
-import be.vub.kdeporre.verifx.TypeError
+import be.vub.verifx.Compiler.Plugins.{ScalaCompilerPlugin, Z3CompilerPlugin}
+import be.vub.verifx.Compiler.ProgramCompiler
+import be.vub.verifx.TypeError
 import org.scalatest.FlatSpec
 
 class ObjectTest extends FlatSpec {

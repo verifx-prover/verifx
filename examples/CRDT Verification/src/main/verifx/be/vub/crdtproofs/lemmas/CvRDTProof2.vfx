@@ -1,0 +1,62 @@
+import be.vub.crdtproofs.lemmas.CvRDT
+
+/*
+ * Extend this trait to prove convergence for a polymorphic state-based CRDT that takes 2 type parameters.
+ * The type parameter `T` is a type constructor of a state-based CRDT,
+ * e.g. class GMap[K, V](...) extends CvRDT[GMap[K, V]]
+ *      object GMap extends CvRDTProof2[GMap]
+ *      This will generate a polymorphic proof that proves that `GMap` is a CvRDT,
+ *      independent of the types of the keys and values.
+ */
+trait CvRDTProof2[ T[A, B] <: CvRDT[T[A, B]] ] {
+  proof is_a_CvRDT[S, U] {
+    forall (x: T[S, U], y: T[S, U], z: T[S, U]) {
+      ( x.reachable() && y.reachable() && z.reachable() &&
+          x.compatible(y) && x.compatible(z) && y.compatible(z)) =>: {
+        x.merge(x).equals(x) && // idempotent
+        x.merge(y).equals(y.merge(x)) && // commutative
+        x.merge(y).merge(z).equals(x.merge(y.merge(z))) && // associative
+        x.merge(y).reachable() && // merged state is reachable
+        x.merge(y).merge(z).reachable() &&
+        x.compatible(y) == y.compatible(x) // compatible commutes
+      }
+    }
+  }
+
+  proof mergeCommutative[S, U] {
+    forall (x: T[S, U], y: T[S, U]) {
+      ( x.reachable() && y.reachable() && x.compatible(y)) =>: {
+        x.merge(y).equals(y.merge(x)) &&
+        x.merge(y).reachable()
+      }
+    }
+  }
+
+  proof mergeIdempotent[S, U] {
+    forall (x: T[S, U]) {
+      x.reachable() =>: x.merge(x).equals(x)
+    }
+  }
+
+  proof mergeAssociative[S, U] {
+    forall (x: T[S, U], y: T[S, U], z: T[S, U]) {
+      ( x.reachable() && y.reachable() && z.reachable() &&
+          x.compatible(y) && x.compatible(z) && y.compatible(z) ) =>: {
+        x.merge(y).merge(z).equals(x.merge(y.merge(z))) &&
+        x.merge(y).merge(z).reachable()
+      }
+    }
+  }
+
+  proof compatibleCommutes[S, U] {
+    forall (x: T[S, U], y: T[S, U]) {
+      ( x.reachable() && y.reachable() ) =>: ( x.compatible(y) == y.compatible(x) )
+    }
+  }
+
+  proof compareCorrect[S, U] {
+    forall (x: T[S, U], y: T[S, U]) {
+      x.equals(y) == (x == y)
+    }
+  }
+}

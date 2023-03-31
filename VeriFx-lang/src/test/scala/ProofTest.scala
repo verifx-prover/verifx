@@ -1,6 +1,6 @@
 import java.nio.file.Path
-import be.vub.kdeporre.verifx.Analysis.Proofs.{Proved, Rejected}
-import be.vub.kdeporre.verifx.Compiler.ProgramCompiler
+import be.vub.verifx.Analysis.Proofs.{Proved, Rejected}
+import be.vub.verifx.Compiler.ProgramCompiler
 import org.scalatest.FlatSpec
 
 class ProofTest extends FlatSpec {
