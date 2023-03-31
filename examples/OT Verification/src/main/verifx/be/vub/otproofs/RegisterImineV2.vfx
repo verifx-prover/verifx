@@ -1,0 +1,10 @@
+import be.vub.otproofs.OT
+
+class Up(v: Int)
+
+object RegisterImineV2 extends OT[Int, Up] {
+  def transform(x: Up, y: Up) = new Up(x.v + y.v)
+
+  // Applies an operation `op` on state `s`
+  def apply(s: Int, op: Up) = op.v // overrides the value by the value written by this operation
+}

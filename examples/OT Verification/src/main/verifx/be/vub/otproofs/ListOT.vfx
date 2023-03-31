@@ -1,0 +1,100 @@
+import be.vub.otproofs.OT
+
+trait ListOT[V, Op] extends OT[LList[V], Op] {
+  def isInsert(x: Op): Boolean
+  def isDelete(x: Op): Boolean
+  def getPosition(x: Op): Int
+  def getValue(x: Op): V
+
+  // Transforms an incoming insert operation `x`
+  // according to an existing insert operation `y`
+  def Tii(x: Op, y: Op): Op
+
+  // Transforms an incoming insert operation `x`
+  // according to an existing delete operation `y`
+  def Tid(x: Op, y: Op): Op
+
+  // Transforms an incoming delete operation `x`
+  // according to an existing insert operation `y`
+  def Tdi(x: Op, y: Op): Op
+
+  // Transforms an incoming delete operation `x`
+  // according to an existing delete operation `y`
+  def Tdd(x: Op, y: Op): Op
+
+  // Transforms incoming operation `x`
+  // according to existing operation `y`
+  def transform(x: Op, y: Op): Op = {
+    if (this.isInsert(x) && this.isInsert(y))
+      this.Tii(x, y)
+    else if (this.isInsert(x) && this.isDelete(y))
+      this.Tid(x, y)
+    else if (this.isDelete(x) && this.isInsert(y))
+      this.Tdi(x, y)
+    else if (this.isDelete(x) && this.isDelete(y))
+      this.Tdd(x, y)
+    else
+      x // if `x` or `y` is not an insert or a delete, then it must be an identity operation
+  }
+
+  def apply(lst: LList[V], op: Op): LList[V] = {
+    if (this.isInsert(op)) {
+      val pos = this.getPosition(op)
+      val char = this.getValue(op)
+      lst.insert(pos, char)
+    }
+    else if (this.isDelete(op)) {
+      val pos = this.getPosition(op)
+      lst.delete(pos)
+    }
+    else {
+      // identity operation
+      lst
+    }
+  }
+
+  proof C1_inserts {
+    forall (opI: Op, opJ: Op, st: LList[V]) {
+      (this.isInsert(opI) && this.isInsert(opJ) &&
+       this.enabled(opI, st) && this.enabled(opJ, st) &&
+       this.compatible(opI, opJ)) =>:
+        (this.apply(this.apply(st, opI), this.transform(opJ, opI)) == this.apply(this.apply(st, opJ), this.transform(opI, opJ)))
+    }
+  }
+
+  proof C1_deletes {
+    forall (opI: Op, opJ: Op, st: LList[V]) {
+      (this.isDelete(opI) && this.isDelete(opJ) &&
+       this.enabled(opI, st) && this.enabled(opJ, st) &&
+       this.compatible(opI, opJ)) =>:
+        (this.apply(this.apply(st, opI), this.transform(opJ, opI)) == this.apply(this.apply(st, opJ), this.transform(opI, opJ)))
+    }
+  }
+
+  proof C1_mix1 {
+    forall (opI: Op, opJ: Op, st: LList[V]) {
+      (this.isInsert(opI) && this.isDelete(opJ) &&
+       this.enabled(opI, st) && this.enabled(opJ, st) &&
+       this.compatible(opI, opJ)) =>:
+        (this.apply(this.apply(st, opI), this.transform(opJ, opI)) == this.apply(this.apply(st, opJ), this.transform(opI, opJ)))
+    }
+  }
+
+  proof C1_mix2 {
+    forall (opI: Op, opJ: Op, st: LList[V]) {
+      (this.isDelete(opI) && this.isInsert(opJ) &&
+       this.enabled(opI, st) && this.enabled(opJ, st) &&
+       this.compatible(opI, opJ)) =>:
+        (this.apply(this.apply(st, opI), this.transform(opJ, opI)) == this.apply(this.apply(st, opJ), this.transform(opI, opJ)))
+    }
+  }
+
+  proof C2_inserts {
+    forall (opI: Op, opJ: Op, opK: Op, st: LList[V]) {
+      (this.isInsert(opI) && this.isInsert(opJ) && this.isInsert(opK) &&
+       this.enabled(opI, st) && this.enabled(opJ, st) && this.enabled(opK, st) &&
+       this.compatible(opI, opJ) && this.compatible(opJ, opK) && this.compatible(opI, opK)) =>:
+        (this.transform(this.transform(opK, opI), this.transform(opJ, opI)) == this.transform(this.transform(opK, opJ), this.transform(opI, opJ)))
+    }
+  }
+}

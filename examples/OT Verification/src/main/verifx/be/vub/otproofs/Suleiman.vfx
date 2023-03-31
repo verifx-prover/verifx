@@ -1,0 +1,110 @@
+import be.vub.otproofs.ListOT
+
+/*
+ * Implementation of Suleiman's transformation functions.
+ * Insert operations keep `a` and `b` sets containing the positions of deletions that happened before the position or at or after the position (at that time!).
+ * However, that position can change over time and since deciding whether an operation should go into the a and b set depends on the current position,
+ * it can be that a position ends up in both the `a` and `b` sets.
+ * This is in fact what happens in the counterexample for TP1 described in:
+ *   Randolph, A., Boucheneb, H., Imine, A., & Quintero, A. (2014).
+ *   On synthesizing a consistent operational transformation approach.
+ *   IEEE Transactions on Computers, 64(4), 1074-1089.
+ */
+
+object Op {
+  enum Op {
+    // b = set of concurrent operations to this insertion that have deleted a character before `position`
+    // a = set of concurrent operations to this insertion that have deleted a character after `position`
+    Insert(p: Int, c: Int, b: Set[Int], a: Set[Int]) |
+    Delete(p: Int) |
+    Identity()
+  }
+}
+
+object Suleiman extends ListOT[Int, Op] {
+  def isInsert(x: Op) = x match {
+    case _: Insert => true
+    case _ => false
+  }
+
+  def isDelete(x: Op) = x match {
+    case _: Delete => true
+    case _ => false
+  }
+
+  def getPosition(x: Op): Int = x match {
+    case Insert(p, _, _, _) => p
+    case Delete(p) => p
+    case Identity() => -1 // should not happen
+  }
+
+  def getValue(x: Op): Int = x.asInstanceOf[Insert].c
+
+  def Tii(op1: Op, op2: Op): Op = {
+    val x = op1.asInstanceOf[Insert]
+    val y = op2.asInstanceOf[Insert]
+    val p1 = x.p; val c1 = x.c; val b1 = x.b; val a1 = x.a
+    val p2 = y.p; val c2 = y.c; val b2 = y.b; val a2 = y.a
+    if (p1 < p2)
+      x
+    else if (p1 > p2)
+      new Insert(p1 + 1, c1, b1, a1)
+    else {
+      // p1 == p2
+      if (b1.intersect(a2).nonEmpty())
+        new Insert(p1 + 1, c1, b1, a1)
+      else if (a1.intersect(b2).nonEmpty())
+        x
+      // ip1 == ip2 --> tie break on the value of the character
+      else if (c1 > c2)
+        x
+      else if (c1 < c2)
+        new Insert(p1 + 1, c1, b1, a1)
+      else {
+        // c1 == c2
+        new Identity()
+      }
+    }
+  }
+
+  def Tid(op1: Op, op2: Op): Op = {
+    val x = op1.asInstanceOf[Insert]
+    val y = op2.asInstanceOf[Delete]
+    if (x.p > y.p)
+      new Insert(x.p - 1, x.c, x.b.add(y.p), x.a)
+    else
+      new Insert(x.p, x.c, x.b, x.a.add(y.p))
+  }
+
+  def Tdd(op1: Op, op2: Op): Op = {
+    val x = op1.asInstanceOf[Delete]
+    val y = op2.asInstanceOf[Delete]
+    if (x.p < y.p)
+      x
+    else if (x.p > y.p)
+      new Delete(x.p - 1)
+    else
+      new Identity()
+  }
+
+  def Tdi(op1: Op, op2: Op): Op = {
+    val x = op1.asInstanceOf[Delete]
+    val y = op2.asInstanceOf[Insert]
+    if (x.p < y.p)
+      x
+    else
+      new Delete(x.p + 1)
+  }
+
+  // Checks if operation `op` can be executed on `state`
+  override def enabled(op: Op, lst: LList[Int]): Boolean = op match {
+    case Delete(p) =>
+      p >= 0 && p < lst.size && lst.wellFormed()
+    case Insert(p, c, b, a) =>
+      p >= 0 &&
+      p <= lst.size &&
+      lst.wellFormed()
+    case _: Identity =>
+      true
+  }
+}

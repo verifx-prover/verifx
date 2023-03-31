@@ -1,0 +1,22 @@
+#sbt
+bin/
+target/
+build/
+project/*
+
+#except
+!project/build.properties
+!project/plugins.sbt
+
+# other?
+.history
+.scala_dependencies
+.cache
+.cache-main
+
+#general
+*.class
+.bsp/
+
+# analysis files
+analysis

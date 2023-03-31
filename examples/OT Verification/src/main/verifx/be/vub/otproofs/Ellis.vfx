@@ -1,0 +1,97 @@
+import be.vub.otproofs.ListOT
+
+object Op {
+  enum Op {
+    Insert(p: Int, c: Int, prOrU: Int) |
+    Delete(p: Int, prOrU: Int) |
+    Identity()
+  }
+}
+
+object Ellis extends ListOT[Int, Op] {
+  def isInsert(x: Op) = x match {
+    case _: Insert => true
+    case _ => false
+  }
+
+  def isDelete(x: Op) = x match {
+    case _: Delete => true
+    case _ => false
+  }
+
+  def getPosition(x: Op): Int = x match {
+    case Insert(p, _, _) => p
+    case Delete(p, _) => p
+    case Identity() => -1 // should not happen
+  }
+
+  def getValue(x: Op): Int = x.asInstanceOf[Insert].c
+
+  def Tii(op1: Op, op2: Op): Op = {
+    val x = op1.asInstanceOf[Insert]
+    val y = op2.asInstanceOf[Insert]
+
+    val p1 = x.p; val c1 = x.c; val pr1 = x.prOrU
+    val p2 = y.p; val c2 = y.c; val pr2 = y.prOrU
+    if (p1 < p2)
+      x
+    else if (p1 > p2)
+      new Insert(p1 + 1, c1, pr1)
+    else if (c1 == c2)
+      new Identity()
+    else if (pr1 > pr2)
+      new Insert(p1 + 1, c1, pr1)
+    else
+      x
+  }
+
+  def Tid(op1: Op, op2: Op): Op = {
+    val x = op1.asInstanceOf[Insert]
+    val y = op2.asInstanceOf[Delete]
+    if (x.p < y.p)
+      x
+    else
+      new Insert(x.p - 1, x.c, x.prOrU)
+  }
+
+  def Tdi(op1: Op, op2: Op): Op = {
+    val x = op1.asInstanceOf[Delete]
+    val y = op2.asInstanceOf[Insert]
+    if (x.p < y.p)
+      x
+    else
+      new Delete(x.p + 1, x.prOrU)
+  }
+
+  def Tdd(op1: Op, op2: Op): Op = {
+    val x = op1.asInstanceOf[Delete]
+    val y = op2.asInstanceOf[Delete]
+    if (x.p < y.p)
+      x
+    else if (x.p > y.p)
+      new Delete(x.p - 1, x.prOrU)
+    else
+      new Identity()
+  }
+
+  private def getPriority(op: Op) = op match {
+    case i: Insert => i.prOrU
+    case d: Delete => d.prOrU
+    case _ => -1 // should never occur
+  }
+
+  override def compatible(x: Op, y: Op): Boolean = {
+    this.getPriority(x) != this.getPriority(y)
+  }
+
+  override def enabled(op: Op, lst: LList[Int]): Boolean = {
+    op match {
+      case del: Delete =>
+        del.p >= 0 && del.p < lst.size && lst.wellFormed()
+      case ins: Insert =>
+        ins.p >= 0 && ins.p <= lst.size && lst.wellFormed()
+      case _: Identity =>
+        true
+    }
+  }
+}

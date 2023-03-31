@@ -1,0 +1,70 @@
+import be.vub.otproofs.OT
+
+class Lst[V](xs: Map[Int, V] = new Map[Int, V](), start: Int = 0, size: Int = 0) {
+  def prepend(x: V) = {
+    val newStart = if (this.size == 0) this.start else this.start - 1
+    new Lst(this.xs.add(newStart, x), newStart, this.size + 1)
+  }
+
+  def append(x: V) = {
+    val firstFree = this.start + this.size
+    new Lst(this.xs.add(firstFree, x), this.start, this.size + 1)
+  }
+
+  def head() = this.xs.get(this.start)
+  def tail() = new Lst(this.xs.remove(this.start), this.start + 1, this.size - 1)
+  def nth(n: Int) = this.xs.get(this.start + n - 1)
+}
+
+object StackOp {
+  enum StackOp[V] {
+    Push(x: V) | Pop() | Id()
+  }
+}
+
+class Stack[V](stk: Lst[V] = new Lst[V]()) extends OT[Stack[V], StackOp[V]] {
+  def push(x: V) = new Stack(this.stk.prepend(x)) // push to the front
+  def pop() = new Stack(this.stk.tail()) // pop from the front
+  def top() = this.stk.head()
+
+  def apply(stk: Stack[V], op: StackOp[V]) = op match {
+    case Push(x) => stk.push(x)
+    case Pop() => stk.pop()
+    case Id() => stk
+  }
+
+  def applyOp(op: StackOp[V]) = this.apply(this, op)
+
+  def transform(x: StackOp[V], y: StackOp[V]) = x match {
+    case Push(v1) => y match {
+      case Push(v2) => {
+        if (x == y)
+          x
+        else
+          new Pop[V]()
+      }
+      case Pop() => new Id[V]()
+      case Id() => x
+    }
+    case Pop() => y match {
+      case Pop() => new Id[V]()
+      case Push(_) => x
+      case Id() => x
+    }
+    case Id() => x
+  }
+}
+
+object StackImineProofs {
+  proof C1[V] {
+    forall (opI: StackOp[V], opJ: StackOp[V], st: Stack[V]) {
+      st.applyOp(opI).applyOp(st.transform(opJ, opI)) == st.applyOp(opJ).applyOp(st.transform(opI, opJ))
+    }
+  }
+
+  proof C2[V] {
+    forall (opI: StackOp[V], opJ: StackOp[V], opK: StackOp[V], st: Stack[V]) {
+      (st.transform(st.transform(opK, opI), st.transform(opJ, opI)) == st.transform(st.transform(opK, opJ), st.transform(opI, opJ)))
+    }
+  }
+}

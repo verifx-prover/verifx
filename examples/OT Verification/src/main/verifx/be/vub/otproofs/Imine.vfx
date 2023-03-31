@@ -1,0 +1,102 @@
+import be.vub.otproofs.ListOT
+
+object Op {
+  enum Op {
+    Insert(p: Int, ip: Int, c: Int) |
+    Delete(p: Int) |
+    Identity()
+  }
+}
+
+/*
+ * Implementation of the transformation functions proposed in
+ * "Proving Correctness of Transformation Functions in Real-Time Groupware"
+ * by Abdessamad Imine, Pascal Molli, Gérald Oster and Michaël Rusinowitch
+ */
+object Imine extends ListOT[Int, Op] {
+  def isInsert(x: Op) = x match {
+    case Insert(_, _, _) => true
+    case _ => false
+  }
+
+  def isDelete(x: Op) = x match {
+    case Delete(_) => true
+    case _ => false
+  }
+
+  def getPosition(x: Op): Int = x match {
+    case Insert(p, _, _) => p
+    case Delete(p) => p
+    case Identity() => -1 // should not happen
+  }
+
+  def getValue(x: Op): Int = x.asInstanceOf[Insert].c
+
+  def Tii(op1: Op, op2: Op): Op = {
+    val x = op1.asInstanceOf[Insert]
+    val y = op2.asInstanceOf[Insert]
+    val p1 = x.p; val ip1 = x.ip; val c1 = x.c
+    val p2 = y.p; val ip2 = y.ip; val c2 = y.c
+    if (p1 < p2)
+      x
+    else if (p1 > p2)
+      new Insert(p1 + 1, ip1, c1)
+    else {
+      // p1 == p2
+      if (ip1 < ip2)
+        x
+      else if (ip1 > ip2)
+        new Insert(p1 + 1, ip1, c1)
+      else {
+        // ip1 == ip2 --> tie break on the value of the character
+        if (c1 < c2)
+          x
+        else if (c1 > c2)
+          new Insert(p1 + 1, ip1, c1)
+        else {
+          // c1 == c2
+          new Identity()
+        }
+      }
+    }
+  }
+
+  def Tid(op1: Op, op2: Op): Op = {
+    val x = op1.asInstanceOf[Insert]
+    val y = op2.asInstanceOf[Delete]
+    if (x.p > y.p)
+      new Insert(x.p - 1, x.ip, x.c)
+    else
+      x
+  }
+
+  def Tdd(op1: Op, op2: Op): Op = {
+    val x = op1.asInstanceOf[Delete]
+    val y = op2.asInstanceOf[Delete]
+    if (x.p < y.p)
+      x
+    else if (x.p > y.p)
+      new Delete(x.p - 1)
+    else
+      new Identity()
+  }
+
+  def Tdi(op1: Op, op2: Op): Op = {
+    val x = op1.asInstanceOf[Delete]
+    val y = op2.asInstanceOf[Insert]
+    if (x.p < y.p)
+      x
+    else
+      new Delete(x.p + 1)
+  }
+
+  // Checks if operation `op` can be executed on `state`
+  override def enabled(op: Op, lst: LList[Int]): Boolean = op match {
+    case Insert(p, ip, c) =>
+      p >= 0 && p <= lst.size && lst.wellFormed()
+    case Delete(p) =>
+      p >= 0 && p < lst.size && lst.wellFormed()
+    case _: Identity =>
+      true
+  }
+}

@@ -1,0 +1,11 @@
+import be.vub.otproofs.OT
+
+class Up(v: Int)
+
+object RegisterImineV3 extends OT[Int, Up] {
+  def max(a: Int, b: Int) = if (a >= b) a else b
+  def transform(x: Up, y: Up) = new Up(this.max(x.v, y.v))
+
+  // Applies an operation `op` on state `s`
+  def apply(s: Int, op: Up) = op.v // overrides the value by the value written by this operation
+}
