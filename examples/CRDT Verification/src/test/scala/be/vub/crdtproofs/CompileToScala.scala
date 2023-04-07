@@ -1,9 +1,9 @@
-package be.vub.crdtproofs.sets
+package be.vub.crdtproofs
 
 import java.io.{BufferedWriter, File, FileWriter}
 import java.nio.file.{Path, Paths}
 
-import be.vub.verifx.Compiler.Plugins.{JavaScriptCompilerPlugin, ScalaCompilerPlugin}
+import be.vub.verifx.Compiler.Plugins.ScalaCompilerPlugin
 import be.vub.verifx.Compiler.ProjectCompiler
 import be.vub.verifx.Utilities.Scanner
 
@@ -13,7 +13,7 @@ object CompileToScala extends App {
 
   compiledFiles foreach {
     case (fileName, code) => {
-      // Transform file path from src/main/verifx/<rest> to src/main/scala/<rest>
+      // Transform file path from src/main/verifx/**/* to src/main/scala/**/*
       val path: Path = Paths.get(fileName)
       val newPath = Paths.get(path.toAbsolutePath.normalize.toString.replace("/src/main/verifx/", "/src/main/scala/"))
 

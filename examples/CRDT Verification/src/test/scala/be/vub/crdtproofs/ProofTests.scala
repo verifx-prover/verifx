@@ -1,4 +1,4 @@
-package be.vub.crdtproofs.sets
+package be.vub.crdtproofs
 
 import be.vub.crdtproofs.Prover
 import org.scalatest.FlatSpec

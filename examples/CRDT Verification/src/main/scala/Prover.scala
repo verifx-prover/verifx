@@ -1,7 +1,6 @@
 package be.vub.crdtproofs
 
 import be.vub.verifx.Analysis.Proofs._
-import be.vub.verifx.Compiler.Plugins.ScalaCompilerPlugin
 import be.vub.verifx.Compiler.ProjectCompiler
 import be.vub.verifx.Utilities.Scanner
 
@@ -10,7 +9,6 @@ import scala.annotation.tailrec
 trait Prover {
   val files = Scanner.scan().toSet
   val pc = ProjectCompiler(files)
-  //val proofResults = pc.checkProofs()
 
   def prove(proof: ProofName, maxTries: Int = 5, timeoutInSeconds: Int = 10): ProofResult = {
     val proofRes = pc.checkProof(proof, maxTries, timeoutInSeconds*1000)
