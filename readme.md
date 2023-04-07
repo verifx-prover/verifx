@@ -12,8 +12,10 @@ This repository contains several packages and is structured as follows:
   - [CRDT Verification](examples/CRDT%20Verification) implements and verifies a variety of CRDTs
   - [OT Verification](examples/OT%20Verification) implements and verifies a variety of Operational Transformation functions
   - An overview of these examples and additional information about them can be found in our paper: [VeriFx: Correct Replicated Data Types for the Masses](https://arxiv.org/abs/2207.02502)
-- [documentation](documentation) contains the source files that document VeriFx's collections and their API.
-  - **The API itself can be found here: TODO**
+- [docs](docs) contains the files for the GitHub pages website that document the VeriFx language
+- [documentation](documentation) contains the source files from which we generate the website
+
+A brief tutorial about the VeriFx language as well as the complete API of VeriFx's collections can be found on our [Github page](http://kevin-dp.github.io/verifx).
 
 ## Installation
 
