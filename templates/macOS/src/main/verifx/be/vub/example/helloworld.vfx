@@ -1,0 +1,15 @@
+object ProofExamples {
+  proof addCommutes {
+    forall (a: Int, b: Int) {
+      a + b == b + a
+    }
+  }
+
+  // Below is a generic proof that states that for any type T, all values of that type are equal.
+  // This property is wrong because we can construct a type T that has two or more distinct values.
+  proof anyValuesAreEqual[T] {
+    forall (a: T, b: T) {
+      a == b
+    }
+  }
+}

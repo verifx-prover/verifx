@@ -1,0 +1,9 @@
+#sbt
+bin/
+target/
+build/
+project/*
+
+#except
+!project/build.properties
+!project/plugins.sbt
