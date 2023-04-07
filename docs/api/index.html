@@ -1,0 +1,128 @@
+<!DOCTYPE html ><html><head><meta http-equiv="X-UA-Compatible" content="IE=edge"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/><title></title><meta content="" name="description"/><meta content="" name="keywords"/><meta http-equiv="content-type" content="text/html; charset=UTF-8"/><link href="lib/index.css" media="screen" type="text/css" rel="stylesheet"/><link href="lib/template.css" media="screen" type="text/css" rel="stylesheet"/><link href="lib/print.css" media="print" type="text/css" rel="stylesheet"/><link href="lib/diagrams.css" media="screen" type="text/css" rel="stylesheet" id="diagrams-css"/><script type="text/javascript" src="lib/jquery.min.js"></script><script type="text/javascript" src="lib/index.js"></script><script type="text/javascript" src="index.js"></script><script type="text/javascript" src="lib/scheduler.js"></script><script type="text/javascript" src="lib/template.js"></script><script type="text/javascript">/* this variable can be used by the JS to determine the path to the root document */
+var toRoot = '';</script></head><body><div id="search"><span id="doc-title"><span id="doc-version"></span></span> <span class="close-results"><span class="left">&lt;</span> Back</span><div id="textfilter"><span class="input"><input autocapitalize="none" placeholder="Search" id="index-input" type="text" accesskey="/"/><i class="clear material-icons"></i><i id="search-icon" class="material-icons"></i></span></div></div><div id="search-results"><div id="search-progress"><div id="progress-fill"></div></div><div id="results-content"><div id="entity-results"></div><div id="member-results"></div></div></div><div id="content-scroll-container" style="-webkit-overflow-scrolling: touch;"><div id="content-container" style="-webkit-overflow-scrolling: touch;"><div id="subpackage-spacer"><div id="packages"><h1>Packages</h1><ul><li class="indented0 current" name="_root_.root" group="Ungrouped" fullComment="no" data-isabs="false" visbl="pub"><a id="_root_"></a><a id="root:_root_"></a> <span class="permalink"><a href="index.html" title="Permalink"><i class="material-icons"></i></a></span> <span class="modifier_kind"><span class="modifier"></span> <span class="kind">package</span></span> <span class="symbol"><span class="name">root</span></span></li><li class="indented1 " name="_root_.verifx" group="Ungrouped" fullComment="yes" data-isabs="false" visbl="pub"><a id="verifx"></a><a id="verifx:verifx"></a> <span class="permalink"><a href="verifx/index.html" title="Permalink"><i class="material-icons"></i></a></span> <span class="modifier_kind"><span class="modifier"></span> <span class="kind">package</span></span> <span class="symbol"><a href="verifx/index.html" title="Welcome to VeriFx's documentation."><span class="name">verifx</span></a></span><p class="shortcomment cmt">Welcome to VeriFx's documentation.</p><div class="fullcomment"><div class="comment cmt"><h3> VeriFx: An Automated Verification Language </h3><p>Welcome to VeriFx's documentation.
+VeriFx is a functional OOP language, inspired by Scala, that supports fully automated verification of high-level correctness properties expressed in VeriFx itself.
+This document describes the API of VeriFx's functional collections and includes a brief tutorial.</p><h5> Object-Oriented Programming in VeriFx </h5><p>VeriFx supports classes, traits, and enumerations.
+The syntax for class definitions is equivalent to Scala:</p><pre><span class="kw">class</span> MyClass[A](field1: Type1, field2: Type2) {
+  <span class="kw">def</span> someMethod(): ReturnType = {
+    <span class="kw">val</span> someNumber: <span class="std">Int</span> = <span class="num">5</span>
+    ...
+  }
+}</pre><p>This defines a class with one type parameter <code>A</code>, two fields, and one method.
+Note that the fields are immutable.
+If some method needs to "change" one of the fields, you need to return a modified copy of the class.</p><p>VeriFx has a type inferencer so you don't need to explicitly define the return type of methods.
+Within a class, <code>this</code> refers to the object itself.
+Hence, inside the body of the method you can access the fields as follows <code>this.field1</code>.
+In contrast to Scala, the use of <code>this</code> is obligatory (as in Java), i.e. if you refer to <code>field1</code> directly the compiler will complain.</p><p>Sometimes, you may want to write recursive methods.
+These need to be annotated with the <code>@recursive</code> annotation and always require a return type, e.g.:</p><pre>@recursive
+<span class="kw">def</span> fib(n: <span class="std">Int</span>): <span class="std">Int</span> = {
+  <span class="kw">if</span> (n == <span class="num">0</span> || n == <span class="num">1</span>)
+    n
+  <span class="kw">else</span>
+    <span class="kw">this</span>.fib(n-<span class="num">1</span>) + <span class="kw">this</span>.fib(n-<span class="num">2</span>)
+}</pre><p>Classes are instantiated using the <code>new</code> keyword, e.g. <code>new Foo(1, 2)</code>.</p><p>Sometimes you want to share some code across several classes to avoid code duplication.
+To this end, VeriFx supports traits.
+Classes and traits can extend from traits (single-inheritance only!).</p><pre><span class="kw">trait</span> Adder {
+  <span class="kw">def</span> plus(x: <span class="std">Int</span>, y: <span class="std">Int</span>) = x+y
+}
+
+<span class="kw">class</span> Arithmetic <span class="kw">extends</span> Adder {
+  <span class="kw">def</span> plusOne(x: <span class="std">Int</span>) = <span class="kw">this</span>.plus(x, <span class="num">1</span>)
+}</pre><p>Traits can be polymorphic and a trait's type parameters can have upper type bounds:</p><pre><span class="kw">trait</span> CRDTProof[T <span class="kw">&lt;:</span> CRDT[T]] {
+  ...
+}</pre><p>Finally, VeriFx also supports enumerations (aka algebraic data types):</p><pre><span class="kw">object</span> Cmd {
+  enum Cmd {
+    Inc(x: <span class="std">Int</span>) | Dec(x: <span class="std">Int</span>) | Nop()
+  }
+}</pre><p>Enumerations are defined using the <code>enum</code> keyword and should always be nested within an object.
+The <code>Cmd</code> enumeration defines 3 constructors <code>Inc</code>, <code>Dec</code>, and <code>Nop</code>.
+These constructors can define fields.</p><p>Enumerations can be instantiated through one of their constructors.
+The resulting object is of type <code>Cmd</code> and can be deconstructed by pattern matching on it.
+For example:</p><pre><span class="kw">def</span> apply(number: <span class="std">Int</span>, cmd: Cmd) = cmd <span class="kw">match</span> {
+  <span class="kw">case</span> Inc(a) <span class="kw">=&gt;</span> number + a
+  <span class="kw">case</span> Dec(a) <span class="kw">=&gt;</span> number - a
+  <span class="kw">case</span> Nop() <span class="kw">=&gt;</span> number
+}</pre><h5> Built-in Collections </h5><p>VeriFx features a number of built-in functional collections: <code>LList</code>, <code>Map</code>, <code>Set</code>, <code>Tuple</code>, <code>Vector</code>.
+The complete API of these collections can be found in this documentation.
+Use the search bar to look up a data type or method.</p><h5> Verifying Correctness Properties </h5><p>VeriFx programs provide a special proof construct.
+A proof describes a correctness property about some VeriFx program and will be verified automatically.
+Proofs are defined using the <code>proof</code> keyword and expect a name and a body.
+The body must be a boolean expression such that its satisfiability can be checked.
+Proofs cannot be top-level and should always be defined inside an object.</p><pre><span class="kw">object</span> MyProof {
+  proof plusCommutes {
+    forall (x: <span class="std">Int</span>, y: <span class="std">Int</span>) {
+      x+y == y+x
+    }
+  }
+}</pre><p>Proofs can also be polymorphic:</p><pre>proof setConverges[T] {
+  forall (x: GSet[T], y: GSet[T]) {
+    x.merge(y) == y.merge(x)
+  }
+}</pre><p>Besides the regular programming constructs,
+proofs can also contain logical constructs such as quantified formulas and logical implication:</p><ul><li><code>forall (var1: Type1, ..., varN: TypeN) { booleanExp }</code></li><li><code>exists (var1: Type1, ..., varN: TypeN) { booleanExp }</code></li><li><code>booleanExp =&gt;: booleanExp</code></li></ul><h5> Organizing Code in Several Files </h5><p>In order to keep your project comprehensible, source code can be spread over several files.
+Files can import other files using the <code>import</code> keyword but this should always occur at the top of the file before anything else:</p><pre><span class="kw">import</span> be.vub.crdtproofs.GCounter</pre><p>Note that imports are different than in Scala.
+The above import statement will import everything from the <code>GCounter</code> file
+that should be located at <code>src/be/vub/crdtproofs/GCounter.vfx</code>.
+Thus, the import statement merely encodes the path to the file, starting from the <code>src</code> folder.</p></div></div></li></ul></div></div><div id="content"><body class="package value"><div id="definition"><div class="big-circle package">p</div><h1>root package <span class="permalink"><a href="index.html" title="Permalink"><i class="material-icons"></i></a></span></h1></div><h4 id="signature" class="signature"><span class="modifier_kind"><span class="modifier"></span> <span class="kind">package</span></span> <span class="symbol"><span class="name">root</span></span></h4><div id="comment" class="fullcommenttop"></div><div id="template"><div id="allMembers"><div id="packages" class="package members"><h3>Package Members</h3><ol><li class="indented0 " name="_root_.verifx" group="Ungrouped" fullComment="yes" data-isabs="false" visbl="pub"><a id="verifx"></a><a id="verifx:verifx"></a> <span class="permalink"><a href="verifx/index.html" title="Permalink"><i class="material-icons"></i></a></span> <span class="modifier_kind"><span class="modifier"></span> <span class="kind">package</span></span> <span class="symbol"><a href="verifx/index.html" title="Welcome to VeriFx's documentation."><span class="name">verifx</span></a></span><p class="shortcomment cmt">Welcome to VeriFx's documentation.</p><div class="fullcomment"><div class="comment cmt"><h3> VeriFx: An Automated Verification Language </h3><p>Welcome to VeriFx's documentation.
+VeriFx is a functional OOP language, inspired by Scala, that supports fully automated verification of high-level correctness properties expressed in VeriFx itself.
+This document describes the API of VeriFx's functional collections and includes a brief tutorial.</p><h5> Object-Oriented Programming in VeriFx </h5><p>VeriFx supports classes, traits, and enumerations.
+The syntax for class definitions is equivalent to Scala:</p><pre><span class="kw">class</span> MyClass[A](field1: Type1, field2: Type2) {
+  <span class="kw">def</span> someMethod(): ReturnType = {
+    <span class="kw">val</span> someNumber: <span class="std">Int</span> = <span class="num">5</span>
+    ...
+  }
+}</pre><p>This defines a class with one type parameter <code>A</code>, two fields, and one method.
+Note that the fields are immutable.
+If some method needs to "change" one of the fields, you need to return a modified copy of the class.</p><p>VeriFx has a type inferencer so you don't need to explicitly define the return type of methods.
+Within a class, <code>this</code> refers to the object itself.
+Hence, inside the body of the method you can access the fields as follows <code>this.field1</code>.
+In contrast to Scala, the use of <code>this</code> is obligatory (as in Java), i.e. if you refer to <code>field1</code> directly the compiler will complain.</p><p>Sometimes, you may want to write recursive methods.
+These need to be annotated with the <code>@recursive</code> annotation and always require a return type, e.g.:</p><pre>@recursive
+<span class="kw">def</span> fib(n: <span class="std">Int</span>): <span class="std">Int</span> = {
+  <span class="kw">if</span> (n == <span class="num">0</span> || n == <span class="num">1</span>)
+    n
+  <span class="kw">else</span>
+    <span class="kw">this</span>.fib(n-<span class="num">1</span>) + <span class="kw">this</span>.fib(n-<span class="num">2</span>)
+}</pre><p>Classes are instantiated using the <code>new</code> keyword, e.g. <code>new Foo(1, 2)</code>.</p><p>Sometimes you want to share some code across several classes to avoid code duplication.
+To this end, VeriFx supports traits.
+Classes and traits can extend from traits (single-inheritance only!).</p><pre><span class="kw">trait</span> Adder {
+  <span class="kw">def</span> plus(x: <span class="std">Int</span>, y: <span class="std">Int</span>) = x+y
+}
+
+<span class="kw">class</span> Arithmetic <span class="kw">extends</span> Adder {
+  <span class="kw">def</span> plusOne(x: <span class="std">Int</span>) = <span class="kw">this</span>.plus(x, <span class="num">1</span>)
+}</pre><p>Traits can be polymorphic and a trait's type parameters can have upper type bounds:</p><pre><span class="kw">trait</span> CRDTProof[T <span class="kw">&lt;:</span> CRDT[T]] {
+  ...
+}</pre><p>Finally, VeriFx also supports enumerations (aka algebraic data types):</p><pre><span class="kw">object</span> Cmd {
+  enum Cmd {
+    Inc(x: <span class="std">Int</span>) | Dec(x: <span class="std">Int</span>) | Nop()
+  }
+}</pre><p>Enumerations are defined using the <code>enum</code> keyword and should always be nested within an object.
+The <code>Cmd</code> enumeration defines 3 constructors <code>Inc</code>, <code>Dec</code>, and <code>Nop</code>.
+These constructors can define fields.</p><p>Enumerations can be instantiated through one of their constructors.
+The resulting object is of type <code>Cmd</code> and can be deconstructed by pattern matching on it.
+For example:</p><pre><span class="kw">def</span> apply(number: <span class="std">Int</span>, cmd: Cmd) = cmd <span class="kw">match</span> {
+  <span class="kw">case</span> Inc(a) <span class="kw">=&gt;</span> number + a
+  <span class="kw">case</span> Dec(a) <span class="kw">=&gt;</span> number - a
+  <span class="kw">case</span> Nop() <span class="kw">=&gt;</span> number
+}</pre><h5> Built-in Collections </h5><p>VeriFx features a number of built-in functional collections: <code>LList</code>, <code>Map</code>, <code>Set</code>, <code>Tuple</code>, <code>Vector</code>.
+The complete API of these collections can be found in this documentation.
+Use the search bar to look up a data type or method.</p><h5> Verifying Correctness Properties </h5><p>VeriFx programs provide a special proof construct.
+A proof describes a correctness property about some VeriFx program and will be verified automatically.
+Proofs are defined using the <code>proof</code> keyword and expect a name and a body.
+The body must be a boolean expression such that its satisfiability can be checked.
+Proofs cannot be top-level and should always be defined inside an object.</p><pre><span class="kw">object</span> MyProof {
+  proof plusCommutes {
+    forall (x: <span class="std">Int</span>, y: <span class="std">Int</span>) {
+      x+y == y+x
+    }
+  }
+}</pre><p>Proofs can also be polymorphic:</p><pre>proof setConverges[T] {
+  forall (x: GSet[T], y: GSet[T]) {
+    x.merge(y) == y.merge(x)
+  }
+}</pre><p>Besides the regular programming constructs,
+proofs can also contain logical constructs such as quantified formulas and logical implication:</p><ul><li><code>forall (var1: Type1, ..., varN: TypeN) { booleanExp }</code></li><li><code>exists (var1: Type1, ..., varN: TypeN) { booleanExp }</code></li><li><code>booleanExp =&gt;: booleanExp</code></li></ul><h5> Organizing Code in Several Files </h5><p>In order to keep your project comprehensible, source code can be spread over several files.
+Files can import other files using the <code>import</code> keyword but this should always occur at the top of the file before anything else:</p><pre><span class="kw">import</span> be.vub.crdtproofs.GCounter</pre><p>Note that imports are different than in Scala.
+The above import statement will import everything from the <code>GCounter</code> file
+that should be located at <code>src/be/vub/crdtproofs/GCounter.vfx</code>.
+Thus, the import statement merely encodes the path to the file, starting from the <code>src</code> folder.</p></div></div></li></ol></div></div><div id="inheritedMembers"></div><div id="groupedMembers"><div name="Ungrouped" class="group"><h3>Ungrouped</h3></div></div></div><div id="tooltip"></div><div id="footer"></div></body></div></div></div></body></html>
