@@ -128,4 +128,5 @@ Fill in the following keywords under 4:
 
 Confirm this file type.
 Now, register a pattern for it.
-Click the "+" button under "Registered Patterns", then enter the following pattern: `*.vfx`
+Click the "+" button under "Registered Patterns", then enter the following pattern: `*.vfx`.
+If everything went well, your VeriFx source files should now be recognised by IntelliJ and have syntax highlighting.
