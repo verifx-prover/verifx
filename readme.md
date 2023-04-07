@@ -5,8 +5,6 @@ VeriFx is a functional OOP language, inspired by Scala, that supports fully auto
 In practice, this means that you write programs and their correctness conditions within the same language, without requiring additional annotations or verification hints of any kind. 
 The compiler takes care of translating your program to SMT and verifying the provided correctness properties using the Z3 SMT solver.
 
-A brief tutorial about the VeriFx language as well as the complete API of VeriFx's collections can be found on our [Github page](http://kevin-dp.github.io/verifx).
-
 This repository contains several packages and is structured as follows:
 - [templates](templates) contains templates for starting your VeriFx projects 
 - [VeriFx-lang](VeriFx-lang) contains the implementation of the VeriFx language itself
@@ -16,6 +14,10 @@ This repository contains several packages and is structured as follows:
   - An overview of these examples and additional information about them can be found in our paper: [VeriFx: Correct Replicated Data Types for the Masses](https://arxiv.org/abs/2207.02502)
 - [docs](docs) contains the files for the GitHub pages website that document the VeriFx language
 - [documentation](documentation) contains the source files from which we generate the website
+
+## Tutorial and API
+
+A brief tutorial about the VeriFx language as well as the complete API of VeriFx's collections can be found on our [Github page](http://kevin-dp.github.io/verifx).
 
 ## Installation
 
