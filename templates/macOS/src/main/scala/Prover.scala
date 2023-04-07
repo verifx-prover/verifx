@@ -1,4 +1,4 @@
-package be.vub.crdtproofs
+package be.vub.example
 
 import be.vub.verifx.Analysis.Proofs._
 import be.vub.verifx.Compiler.ProjectCompiler

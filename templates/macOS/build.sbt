@@ -1,6 +1,6 @@
-name := "crdt-proofs"
-organization := "be.vub.kdeporre"
-version := "0.2-SNAPSHOT"
+name := "example"
+organization := "be.vub"
+version := "0.1"
 
 scalaVersion := "2.13.1"
 
