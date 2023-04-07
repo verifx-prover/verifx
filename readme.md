@@ -26,7 +26,7 @@ libraryDependencies += "be.vub" %% "verifx" % "1.0.0"
 
 **Make sure that you have Z3 available on your class path** by adding the Z3 jar to the `lib` folder
 and the necessary library files (`libz3.dylib`, `libz3java.dylib` for mac, and `libz3.so`, `libz3java.so` for linux) in the root folder of your project (**cf. the template projects**).
-The version of Z3 in your project should match the version of Z3 that is used internally in [VeriFx](VeriFx-lang).
+The version of Z3 in your project should match the version of Z3 that is used internally in [VeriFx](VeriFx-lang), which currently is Z3 4.8.14.0.
 
 ## Code structure
 
