@@ -128,9 +128,9 @@
  * Besides the regular programming constructs,
  * proofs can also contain logical constructs such as quantified formulas and logical implication:
  *
- *  - `forall (var1: Type1, ..., varN: TypeN) { booleanExp }` universally quantified formula
- *  - `exists (var1: Type1, ..., varN: TypeN) { booleanExp }` existentially quantified formula
- *  - `booleanExp =>: booleanExp` logical implication
+ *  - `forall (var1: Type1, ..., varN: TypeN) { booleanExp }`
+ *  - `exists (var1: Type1, ..., varN: TypeN) { booleanExp }`
+ *  - `booleanExp =>: booleanExp`
  *
  * === Organizing Code in Several Files ===
  *
