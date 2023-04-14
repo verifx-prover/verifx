@@ -1,6 +1,6 @@
-package be.vub.verifx.Compiler
+package org.verifx.verifx.Compiler
 
-import be.vub.verifx.{ClassNotFound, FieldDoesNotExist, MatchError, MethodNotFound, ParseError, TypeError, UnknownIdentifierError}
+import org.verifx.verifx.{ClassNotFound, FieldDoesNotExist, MatchError, MethodNotFound, ParseError, TypeError, UnknownIdentifierError}
 
 import scala.meta.Term.Eta
 import scala.meta._

@@ -1,9 +1,11 @@
-package be.vub.verifx.Analysis
+package org.verifx.verifx.Analysis
 
-import be.vub.verifx.Compiler.Plugins.Z3CompilerPlugin
-import be.vub.verifx.Compiler.Plugins.Z3CompilerPlugin.Z3Type
-import be.vub.verifx.Compiler.Types.{Classes, Proof}
+import org.verifx.verifx.Compiler.Plugins.Z3CompilerPlugin
+import org.verifx.verifx.Compiler.Plugins.Z3CompilerPlugin.Z3Type
+import org.verifx.verifx.Compiler.Types.{Classes, Proof}
 import com.microsoft.z3.{Context, Model, Solver}
+import org.verifx.verifx.Compiler.Plugins.Z3CompilerPlugin.{CompilerState, Z3Type}
+import org.verifx.verifx.Compiler.Types.{Classes, Proof}
 
 import scala.collection.SortedSet
 
@@ -69,7 +71,7 @@ object Proofs {
   /**
     * Returns a tuple containing the proof program and the list of universally quantified variables and their types
     **/
-  def getProofProgram(proof: Proof, z3Program: String, classTable: Classes, z3CompilerState: Z3CompilerPlugin.CompilerState, maxTries: Int = 5, timeout: Int = 10000, eliminateForall: Boolean = false): (String, List[(String, Z3Type)]) = proof match {
+  def getProofProgram(proof: Proof, z3Program: String, classTable: Classes, z3CompilerState: CompilerState, maxTries: Int = 5, timeout: Int = 10000, eliminateForall: Boolean = false): (String, List[(String, Z3Type)]) = proof match {
     case Proof(proofName, _, _, dummyClassName) => {
       val name = if (!eliminateForall) proofName else s"${proofName}_eliminated"
 

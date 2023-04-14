@@ -1,13 +1,13 @@
-package be.vub.verifx
+package org.verifx.verifx
 
 import java.lang.Error
 import java.nio.file.{Path, Paths}
 import java.io.{BufferedWriter, File, FileWriter}
-import be.vub.verifx.Utilities.Scanner
-import be.vub.verifx.Compiler.ProjectCompiler
-import be.vub.verifx.Compiler.Plugins.{JavaScriptCompilerPlugin, ScalaCompilerPlugin, Z3CompilerPlugin}
-import be.vub.verifx.Compiler.ProjectCompiler
-import be.vub.verifx.Utilities.Scanner
+import org.verifx.verifx.Utilities.Scanner
+import org.verifx.verifx.Compiler.ProjectCompiler
+import org.verifx.verifx.Compiler.Plugins.{JavaScriptCompilerPlugin, ScalaCompilerPlugin, Z3CompilerPlugin}
+import org.verifx.verifx.Compiler.ProjectCompiler
+import org.verifx.verifx.Utilities.Scanner
 
 /**
  * Scans the `src/main/verifx/` directory for VeriFx files

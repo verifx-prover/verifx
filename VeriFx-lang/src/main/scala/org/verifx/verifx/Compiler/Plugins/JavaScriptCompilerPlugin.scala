@@ -1,11 +1,11 @@
-package be.vub.verifx.Compiler.Plugins
+package org.verifx.verifx.Compiler.Plugins
 
 import java.io.File
 
-import be.vub.verifx.Utilities.Interpolators._
-import be.vub.verifx.Compiler.IR.{Op, Term, Type}
-import be.vub.verifx.Compiler.Plugins.JavaScriptCompilerPlugin.{CompilerState, JSExp}
-import be.vub.verifx.Compiler.{IR, Plugin}
+import org.verifx.verifx.Utilities.Interpolators._
+import org.verifx.verifx.Compiler.IR.{Op, Term, Type}
+import org.verifx.verifx.Compiler.Plugins.JavaScriptCompilerPlugin.{CompilerState, JSExp}
+import org.verifx.verifx.Compiler.{IR, Plugin}
 import cats.data.State
 import cats.implicits._
 

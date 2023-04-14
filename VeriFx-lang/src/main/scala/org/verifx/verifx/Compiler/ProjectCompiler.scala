@@ -1,13 +1,13 @@
-package be.vub.verifx.Compiler
+package org.verifx.verifx.Compiler
 
 import java.io.File
 import java.nio.file.Path
 
-import be.vub.verifx.Analysis.Proofs.{Aborted, ProofName, ProofResult, Proved, Rejected}
-import be.vub.verifx.Compiler.ProgramCompiler.FileName
-import be.vub.verifx.Compiler.ProjectCompiler.{ClassName, ObjectName}
-import be.vub.verifx.Compiler.Types.{Classes, Proof}
-import be.vub.verifx.ParseError
+import org.verifx.verifx.Analysis.Proofs.{Aborted, ProofName, ProofResult, Proved, Rejected}
+import org.verifx.verifx.Compiler.ProgramCompiler.FileName
+import org.verifx.verifx.Compiler.ProjectCompiler.{ClassName, ObjectName}
+import org.verifx.verifx.Compiler.Types.{Classes, Proof}
+import org.verifx.verifx.ParseError
 import org.jgrapht.alg.connectivity.ConnectivityInspector
 import org.jgrapht.graph.{DefaultEdge, DirectedAcyclicGraph}
 

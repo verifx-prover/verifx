@@ -1,15 +1,15 @@
-package be.vub.verifx.Compiler
+package org.verifx.verifx.Compiler
 
 import java.nio.file.Path
-import be.vub.verifx.Analysis.Proofs
-import be.vub.verifx.Compiler.Plugins.Z3CompilerPlugin
-import be.vub.verifx.Compiler.ProgramCompiler.FileName
-import be.vub.verifx.Analysis.Proofs.{ProofName, ProofResult}
-import be.vub.verifx.Compiler.Types.{Classes, Proof}
-import be.vub.verifx.ParseError
-import be.vub.verifx.Compiler.IR.IR
-import be.vub.verifx.Compiler.Plugins.Z3CompilerPlugin
-import be.vub.verifx.Compiler.Types.{Classes, Proof}
+import org.verifx.verifx.Analysis.Proofs
+import org.verifx.verifx.Compiler.Plugins.Z3CompilerPlugin
+import org.verifx.verifx.Compiler.ProgramCompiler.FileName
+import org.verifx.verifx.Analysis.Proofs.{ProofName, ProofResult}
+import org.verifx.verifx.Compiler.Types.{Classes, Proof}
+import org.verifx.verifx.ParseError
+import org.verifx.verifx.Compiler.IR.IR
+import org.verifx.verifx.Compiler.Plugins.Z3CompilerPlugin
+import org.verifx.verifx.Compiler.Types.{Classes, Proof}
 import cats.data.State
 import cats.implicits._
 
@@ -37,10 +37,10 @@ object ProgramCompiler {
     new ProgramCompiler(file)
   }
 
-  private val imports = "import be.vub.verifx.Compiler.IR._"
+  private val imports = "import org.verifx.verifx.Compiler.IR._"
   type FileName = String
 
-  // Transforms `import be.vub.kdeporre.mypackage.myfile` to `IR.Import("be/vub/kdeporre/mypackage/myfile")`
+  // Transforms `import org.verifx.kdeporre.mypackage.myfile` to `IR.Import("be/vub/kdeporre/mypackage/myfile")`
   private def compileImport(stat: Import): String = {
     val pkgStr = stat.importers.mkString(".")
     s"""Import("$pkgStr")"""

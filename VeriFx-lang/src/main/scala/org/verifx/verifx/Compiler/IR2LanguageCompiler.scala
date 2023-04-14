@@ -1,10 +1,10 @@
-package be.vub.verifx.Compiler
+package org.verifx.verifx.Compiler
 
 import cats.data.State
 import cats.implicits._
 
 class IR2LanguageCompiler[C, M <: C, S](val plugin: Plugin[C, M, S]) {
-  import be.vub.verifx.Compiler.IR._
+  import org.verifx.verifx.Compiler.IR._
 
   def compileArg(arg: Defn.Arg) = arg match {
     case Defn.Arg(name, tpe) => compile(tpe) map {

@@ -1,6 +1,6 @@
-import be.vub.verifx.Compiler.Plugins.{ScalaCompilerPlugin, Z3CompilerPlugin}
-import be.vub.verifx.Compiler.ProgramCompiler
-import be.vub.verifx.{ParseError, TypeError}
+import org.verifx.verifx.Compiler.Plugins.{ScalaCompilerPlugin, Z3CompilerPlugin}
+import org.verifx.verifx.Compiler.ProgramCompiler
+import org.verifx.verifx.{ParseError, TypeError}
 import org.scalatest.FlatSpec
 
 class TraitTest extends FlatSpec {

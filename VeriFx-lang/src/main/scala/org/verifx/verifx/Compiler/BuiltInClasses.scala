@@ -1,6 +1,6 @@
-package be.vub.verifx.Compiler
+package org.verifx.verifx.Compiler
 
-import be.vub.verifx.Utilities.Interpolators._
+import org.verifx.verifx.Utilities.Interpolators._
 import meta._
 
 object BuiltInClasses {

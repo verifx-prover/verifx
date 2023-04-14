@@ -1,4 +1,4 @@
-package be.vub.verifx.Runtime
+package org.verifx.verifx.Runtime
 
 /**
  * Extends Scala's `Map` and `Set` data types with VeriFx methods.

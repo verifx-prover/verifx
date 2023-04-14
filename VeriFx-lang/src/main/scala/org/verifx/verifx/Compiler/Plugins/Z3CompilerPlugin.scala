@@ -1,7 +1,7 @@
-package be.vub.verifx.Compiler.Plugins
+package org.verifx.verifx.Compiler.Plugins
 
-import be.vub.verifx.Compiler.IR.{Op, Term, Type}
-import be.vub.verifx.Compiler.{IR, Plugin, ProgramCompiler}
+import org.verifx.verifx.Compiler.IR.{Op, Term, Type}
+import org.verifx.verifx.Compiler.{IR, Plugin, ProgramCompiler}
 import cats.data.State
 import cats.implicits._
 
@@ -508,7 +508,7 @@ object Z3CompilerPlugin {
 
 class Z3CompilerPlugin extends Plugin[Z3CompilerPlugin.Z3Exp, Z3CompilerPlugin.MethodOrPredicate, Z3CompilerPlugin.CompilerState] {
   import Z3CompilerPlugin._
-  import be.vub.verifx.Utilities.Interpolators._
+  import org.verifx.verifx.Utilities.Interpolators._
 
   val int_type: Z3Type = intT
   val bool_type: Z3Type = boolT

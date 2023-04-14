@@ -1,11 +1,12 @@
-package be.vub.verifx.Compiler.Plugins
+package org.verifx.verifx.Compiler.Plugins
 
-import be.vub.verifx.Utilities.Interpolators._
-import be.vub.verifx.Compiler.IR.{Op, Term, Type}
-import be.vub.verifx.Compiler.Plugins.ScalaCompilerPlugin.{ClassTable, ScalaExp}
-import be.vub.verifx.Compiler.{IR, Plugin, ProjectCompiler}
+import org.verifx.verifx.Utilities.Interpolators._
+import org.verifx.verifx.Compiler.IR.{Op, Term, Type}
+import org.verifx.verifx.Compiler.Plugins.ScalaCompilerPlugin.{ClassTable, ScalaExp}
+import org.verifx.verifx.Compiler.{IR, Plugin, ProjectCompiler}
 import cats.data.State
 import cats.implicits._
+import org.verifx.verifx.Compiler.ProjectCompiler
 
 object ScalaCompilerPlugin {
   final case class Clazz(methods: Map[String, Method], supert: Option[Clazz]) {
@@ -99,7 +100,7 @@ object ScalaCompilerPlugin {
     makeArgList(typedFields)
   }
 
-  val veriFxOps = "be.vub.verifx.Runtime.Implicits"
+  val veriFxOps = "org.verifx.verifx.Runtime.Implicits"
 }
 
 class ScalaCompilerPlugin extends Plugin[ScalaExp, ScalaExp, ClassTable] {
@@ -473,7 +474,7 @@ class ScalaCompilerPlugin extends Plugin[ScalaExp, ScalaExp, ClassTable] {
   def makeLogicVar(name: String, tpe: ScalaExp): State[ClassTable, ScalaExp] = State.pure("")
 
   def startFile(maybePath: Option[String]): State[ClassTable, ScalaExp] = State.pure {
-    import be.vub.verifx.Utilities.Utils.RichString
+    import org.verifx.verifx.Utilities.Utils.RichString
 
     maybePath match {
       case Some(path) => {

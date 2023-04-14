@@ -1,4 +1,4 @@
-package be.vub.verifx
+package org.verifx.verifx
 
 import scala.meta.inputs.{Input, Position}
 

@@ -1,4 +1,4 @@
-package be.vub.verifx.Utilities
+package org.verifx.verifx.Utilities
 
 // Taken from: https://stackoverflow.com/questions/11404399/indentation-preserving-string-interpolation-in-scala
 object Interpolators {

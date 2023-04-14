@@ -1,8 +1,8 @@
-package be.vub.verifx.Utilities
+package org.verifx.verifx.Utilities
 
 import java.util.regex.Matcher
-
-import be.vub.verifx.Compiler.Plugins.Z3CompilerPlugin
+import org.verifx.verifx.Compiler.Plugins.Z3CompilerPlugin
+import org.verifx.verifx.Compiler.Plugins.Z3CompilerPlugin
 
 import scala.util.matching.Regex
 

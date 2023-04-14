@@ -1,7 +1,7 @@
-package be.vub.verifx.Compiler
+package org.verifx.verifx.Compiler
 
 import Types.{Classes, Proof, TypeWithEqualsCheck, TypeWithSubtypeCheck}
-import be.vub.verifx.{ClassNotFound, FieldDoesNotExist, IllegalArgumentException, IllegalOperationError, MatchError, MethodNotFound, ParseError, TypeError}
+import org.verifx.verifx.{ClassNotFound, FieldDoesNotExist, IllegalArgumentException, IllegalOperationError, MatchError, MethodNotFound, ParseError, TypeError}
 import CompilerUtil.{isAnnotation, isOverrideModifier, isPrivateModifier, isProtectedModifier, isRecursiveAnnotation}
 import Implicits._
 import org.jgrapht.graph.{DefaultEdge, DirectedAcyclicGraph}
@@ -1071,7 +1071,7 @@ object MethodCompiler {
 case class MethodCompiler()(implicit thisClass: Type, classTable: Classes) {
 
   /**
-   * Transforms a method declaration into an IR [[be.vub.verifx.Compiler.IR.Decl.Method]].
+   * Transforms a method declaration into an IR [[org.verifx.verifx.Compiler.IR.Decl.Method]].
    */
   def transformer(method: Decl.Def): (Term, Classes) = {
     // Method declarations may not be private or have override modifier
@@ -1125,7 +1125,7 @@ case class MethodCompiler()(implicit thisClass: Type, classTable: Classes) {
   }
 
   /**
-   * Transforms a method definition into an IR [[be.vub.verifx.Compiler.IR.Defn.MethodDef]].
+   * Transforms a method definition into an IR [[org.verifx.verifx.Compiler.IR.Defn.MethodDef]].
    */
   def transformer(method: Defn.Def): (Term, Classes) = {
     val recursive = method.mods.exists(isRecursiveAnnotation)

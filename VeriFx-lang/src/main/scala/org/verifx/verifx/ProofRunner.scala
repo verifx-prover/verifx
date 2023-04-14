@@ -1,7 +1,7 @@
-package be.vub.verifx
+package org.verifx.verifx
 
-import be.vub.verifx.Compiler.ProjectCompiler
-import be.vub.verifx.Utilities.Scanner
+import org.verifx.verifx.Compiler.ProjectCompiler
+import org.verifx.verifx.Utilities.Scanner
 
 /**
  * Scans the `src/main/verifx/` directory for VeriFx files,

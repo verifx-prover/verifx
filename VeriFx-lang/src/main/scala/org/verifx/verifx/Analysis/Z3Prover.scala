@@ -1,9 +1,9 @@
-package be.vub.verifx.Analysis
+package org.verifx.verifx.Analysis
 
 import java.util.HashMap
-import be.vub.verifx.Analysis.Proofs.{Aborted, ProofResult, Proved, Rejected}
-import be.vub.verifx.Compiler.Plugins.Z3CompilerPlugin.Z3Type
-import be.vub.verifx.Compiler.Plugins.Z3CompilerPlugin.Z3Type
+import org.verifx.verifx.Analysis.Proofs.{Aborted, ProofResult, Proved, Rejected}
+import org.verifx.verifx.Compiler.Plugins.Z3CompilerPlugin.Z3Type
+import org.verifx.verifx.Compiler.Plugins.Z3CompilerPlugin.Z3Type
 import com.microsoft.z3.{Context, Solver}
 
 trait Z3Prover {

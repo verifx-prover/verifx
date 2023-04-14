@@ -1,4 +1,4 @@
-package be.vub.verifx.Compiler
+package org.verifx.verifx.Compiler
 
 import cats.data.State
 

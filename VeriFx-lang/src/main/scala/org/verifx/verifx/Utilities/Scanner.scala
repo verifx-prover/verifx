@@ -1,4 +1,4 @@
-package be.vub.verifx.Utilities
+package org.verifx.verifx.Utilities
 
 import java.io.File
 import java.nio.file.{Path, Paths}

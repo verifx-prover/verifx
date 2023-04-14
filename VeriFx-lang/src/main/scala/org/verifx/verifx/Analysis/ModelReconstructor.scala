@@ -1,6 +1,6 @@
-package be.vub.verifx.Analysis
+package org.verifx.verifx.Analysis
 
-import be.vub.verifx.Compiler.Plugins.Z3CompilerPlugin.Z3Type
+import org.verifx.verifx.Compiler.Plugins.Z3CompilerPlugin.Z3Type
 import com.microsoft.z3.{ArrayExpr, ArraySort, BoolSort, Context, DatatypeExpr, DatatypeSort, Expr, IntSort, Model, Sort, Z3Exception}
 
 import scala.meta.{Term, Type}

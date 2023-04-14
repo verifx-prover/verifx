@@ -1,6 +1,6 @@
-package be.vub.verifx.Utilities
+package org.verifx.verifx.Utilities
 
-import be.vub.verifx.Utilities.ExtendedString._
+import org.verifx.verifx.Utilities.ExtendedString._
 
 object Utils {
   implicit class RichString(val s: String) {
