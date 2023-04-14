@@ -25,7 +25,7 @@ You can start from our [predefined templates](templates) or follow the steps bel
 
 Create a regular Scala project and add VeriFx as a dependency to your `build.sbt` file:
 ```sbt
-libraryDependencies += "be.vub" %% "verifx" % "1.0.0"
+libraryDependencies += "org.verifx" %% "verifx" % "1.0.0"
 ```
 
 **Make sure that you have Z3 available on your class path** by adding the Z3 jar to the `lib` folder
