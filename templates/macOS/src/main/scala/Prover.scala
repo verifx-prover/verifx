@@ -1,8 +1,8 @@
-package be.vub.example
+package org.verifx.example
 
-import be.vub.verifx.Analysis.Proofs._
-import be.vub.verifx.Compiler.ProjectCompiler
-import be.vub.verifx.Utilities.Scanner
+import org.verifx.Analysis.Proofs._
+import org.verifx.Compiler.ProjectCompiler
+import org.verifx.Utilities.Scanner
 
 import scala.annotation.tailrec
 

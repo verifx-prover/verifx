@@ -1,5 +1,6 @@
-package be.vub.example
+package org.verifx.example
 
+import org.verifx.example.Prover
 import org.scalatest.FlatSpec
 
 class ProofTests extends FlatSpec with Prover {
