@@ -1,7 +1,7 @@
-import org.verifx.verifx.Compiler.Plugins.{JavaScriptCompilerPlugin, ScalaCompilerPlugin, Z3CompilerPlugin}
-import org.verifx.verifx.Compiler.ProgramCompiler
-import org.verifx.verifx.{ParseError, TypeError}
 import org.scalatest.FlatSpec
+import org.verifx.Compiler.Plugins.{JavaScriptCompilerPlugin, ScalaCompilerPlugin, Z3CompilerPlugin}
+import org.verifx.Compiler.ProgramCompiler
+import org.verifx.{ParseError, TypeError}
 
 class EnumTest extends FlatSpec {
   "Enumerations" should "be supported" in {

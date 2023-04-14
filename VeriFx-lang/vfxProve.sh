@@ -1,3 +1,3 @@
 #!/bin/sh
 
-sbt "runMain org.verifx.verifx.ProofRunner"
+sbt "runMain org.verifx.ProofRunner"

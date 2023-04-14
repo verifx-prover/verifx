@@ -28,4 +28,4 @@ then
 fi
 
 # Begin script in case all parameters are correct
-sbt "runMain org.verifx.verifx.CompilerRunner $lang $out"
+sbt "runMain org.verifx.CompilerRunner $lang $out"

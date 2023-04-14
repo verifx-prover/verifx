@@ -1,7 +1,7 @@
-import org.verifx.verifx.Compiler.Plugins.{ScalaCompilerPlugin, Z3CompilerPlugin}
-import org.verifx.verifx.Compiler.ProgramCompiler
-import org.verifx.verifx.TypeError
 import org.scalatest.FlatSpec
+import org.verifx.Compiler.Plugins.{ScalaCompilerPlugin, Z3CompilerPlugin}
+import org.verifx.Compiler.ProgramCompiler
+import org.verifx.TypeError
 
 class ObjectTest extends FlatSpec {
   "Objects" should "be able to extend traits" in {

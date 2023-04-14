@@ -1,8 +1,8 @@
 import java.nio.file.Path
 
-import org.verifx.verifx.Analysis.Proofs.Proved
-import org.verifx.verifx.Compiler.ProgramCompiler
+import org.verifx.Analysis.Proofs.Proved
 import org.scalatest.FlatSpec
+import org.verifx.Compiler.ProgramCompiler
 
 class BuiltInsTest extends FlatSpec {
   val builtInsFile: Path = java.nio.file.Paths.get("src/test/verifx", "BuiltInProofs.vfx")
