@@ -1,0 +1,212 @@
+import org.verifx.crdtproofs.lemmas.CmRDT
+import org.verifx.crdtproofs.lemmas.CmRDTProof1
+import org.verifx.crdtproofs.LamportClock
+import org.verifx.crdtproofs.sets.TwoPSet
+
+class Elem[V](atom: V, timestamp: LamportClock)
+
+/*
+ * Implementation of a Replicated Growable Array.
+ * Corresponds to specification 19 from the paper "A Comprehensive Study of CRDTs".
+ */
+
+object Op {
+  enum RGAOp[V] {
+    AddRight(l: Elem[V], a: V) |
+    Remove(w: Elem[V])
+  }
+
+  enum RGAMsg[V] {
+    AddRightMsg(l: Elem[V], w: Elem[V]) |
+    RemoveMsg(w: Elem[V])
+  }
+}
+
+class RGA[V](clock: LamportClock,
+             vertices: TwoPSet[Elem[V]],
+             edges: Map[Elem[V], Elem[V]],
+             bottomValue: V) extends CmRDT[RGAOp[V], RGAMsg[V], RGA[V]] {
+
+  def leftSentinel() = new Elem(this.bottomValue, new LamportClock(-1, -1))
+  def rightSentinel() = new Elem(this.bottomValue, new LamportClock(-1, 0))
+
+  def allVerticesBeforeRightSentinel(): Boolean = {
+    forall(a: Elem[V]) {
+      (this.lookup(a) && a != this.rightSentinel()) =>: this.before(a, this.rightSentinel())
+    }
+  }
+
+  override def reachable() = {
+    this.clock.replica >= 0 &&
+    this.clock.counter >= 0 &&
+    this.vertices
+        .filter((e: Elem[V]) => e != this.leftSentinel() && e != this.rightSentinel())
+        .forall((e: Elem[V]) => e.timestamp.replica >= 0 && e.timestamp.counter >= 0) &&
+    // left and right sentinels are in the sequence
+    this.lookup(this.leftSentinel()) &&
+    this.lookup(this.rightSentinel()) &&
+    this.edges.contains(this.leftSentinel()) &&
+    // there is nothing before |-
+    !exists(a: Elem[V]) {
+      this.before(a, this.leftSentinel())
+    } &&
+    // there is an edge from |- to the first element or to -| if the sequence is empty
+    exists(first: Elem[V]) {
+      this.lookup(first) &&
+      this.edges.get(this.leftSentinel()) == first
+    } &&
+    // there is an edge from the last element to -|
+    exists(last: Elem[V]) {
+      this.lookup(last) &&
+      this.edges.contains(last) &&
+      this.edges.get(last) == this.rightSentinel()
+    } &&
+    // there is nothing after -|
+    !this.edges.contains(this.rightSentinel()) &&
+    // there is a path from |- to -|
+    this.before(this.leftSentinel(), this.rightSentinel()) &&
+    // there are no cycles
+    !exists(a: Elem[V], b: Elem[V]) {
+      this.lookup(a) && this.lookup(b) &&
+      this.before(a, b) && this.before(b, a)
+    } &&
+    // Every element occurs between |- and -|
+    forall(a: Elem[V]) {
+      (this.lookup(a) && a != this.leftSentinel() && a != this.rightSentinel()) =>: (this.before(this.leftSentinel(), a) && this.before(a, this.rightSentinel()))
+    } &&
+    // All edges are between vertices that were once added
+    this.edges.forall((from: Elem[V], to: Elem[V]) => this.vertices.added.contains(from) && this.vertices.added.contains(to))
+  }
+
+  override def compatibleS(that: RGA[V]): Boolean = {
+    this.clock.replica != that.clock.replica // replicas have unique IDs
+  }
+
+  def isNewTimestamp(t: LamportClock): Boolean = {
+    this.vertices.added.forall((vertex: Elem[V]) => vertex.timestamp != t) &&
+    this.edges.forall((key: Elem[V], value: Elem[V]) => key.timestamp != t && value.timestamp != t) &&
+    t != this.leftSentinel().timestamp &&
+    t != this.rightSentinel().timestamp
+  }
+
+  def lookup(v: Elem[V]) =
+    this.vertices.lookup(v)
+
+  pre before(a: Elem[V], b: Elem[V]) {
+    this.lookup(a) && this.lookup(b)
+  }
+
+  // True if `a` is before `b` in the list,
+  // i.e. there is a path from `a` to `b`.
+  @recursive
+  def before(a: Elem[V], b: Elem[V]): Boolean = {
+    if (this.edges.contains(a)) {
+      val v = this.edges.get(a)
+      v == b ||
+      // or, can we make 1 step and reach `b` from there?
+      this.before(v, b)
+    }
+    else
+      false
+  }
+
+  pre successor(u: Elem[V]) {
+    this.lookup(u)
+  }
+
+  def successor(u: Elem[V]): Elem[V] = {
+    // there is always a successor because of the initial right sentinel
+    // and `u` is a vertex between the left and right sentinels
+    // more precisely: u is in [|-, -|[
+    this.edges.get(u)
+  }
+
+  def preAddRight(l: Elem[V], a: V) = {
+    this.lookup(l) && l != this.rightSentinel()
+  }
+
+  def addRight(l: Elem[V], a: V): RGAMsg[V] = {
+    val t = this.clock.increment()
+    val w = new Elem(a, t)
+    new AddRightMsg(l, w)
+  }
+
+  def preAddRightDownstream(l: Elem[V], w: Elem[V]) = {
+    this.vertices.added.contains(l) // graph precondition
+  }
+
+  def addRightDownstream(l: Elem[V], w: Elem[V]): RGA[V] = {
+    val r = this.successor(l)
+    val t = w.timestamp
+    this.findInsertPosition(t, w, l, r)
+  }
+
+  @recursive
+  private def findInsertPosition(t: LamportClock, w: Elem[V], l: Elem[V], r: Elem[V]): RGA[V] = {
+    if (t.smaller(r.timestamp)) {
+      this.findInsertPosition(t, w, r, this.successor(r)) // successor(r) = -| \/ t > t'
+    }
+    else {
+      // found the correct position
+      // update our clock if this insertion was generated by us
+      val newClock = if (w.timestamp.replica == this.clock.replica) w.timestamp else this.clock
+      new RGA(
+        newClock,
+        this.vertices.add(w), // this differs from spec 19 because they forgot to add the vertex
+        this.edges.add(l, w).add(w, r), // E := E \ (l,r) ∪ {(l,w),(w,r)}
+        this.bottomValue
+      )
+    }
+  }
+
+  // recursion ends because at the end you have the right sentinel with lamport clock (bottom, 0)
+  // and every lamport clock is bigger than 0!
+  // so if `r` is the right sentinel, then you will end in the else branch
+
+  def preRemove(w: Elem[V]): Boolean = {
+    this.lookup(w)
+  }
+
+  def remove(w: Elem[V]): RGAMsg[V] = new RemoveMsg(w)
+
+  def preRemoveDownstream(w: Elem[V]) = {
+    this.vertices.added.contains(w)
+  }
+
+  def removeDownstream(w: Elem[V]) = {
+    new RGA(
+      this.clock,
+      this.vertices.remove(w),
+      this.edges,
+      this.bottomValue
+    )
+  }
+
+  override def enabledSrc(op: RGAOp[V]) = op match {
+    case AddRight(l, a) => this.preAddRight(l, a)
+    case Remove(w) => this.preRemove(w)
+  }
+
+  def prepare(op: RGAOp[V]) = op match {
+    case AddRight(l, a) => this.addRight(l, a)
+    case Remove(w) => this.remove(w)
+  }
+
+  override def enabledDown(op: RGAMsg[V]) = op match {
+    case AddRightMsg(l, w) => this.preAddRightDownstream(l, w)
+    case RemoveMsg(w) => this.preRemoveDownstream(w)
+  }
+
+  def effect(msg: RGAMsg[V]) = msg match {
+    case AddRightMsg(l, w) => this.addRightDownstream(l, w)
+    case RemoveMsg(w) => this.removeDownstream(w)
+  }
+
+  override def equals(that: RGA[V]) = {
+    this.vertices.equals(that.vertices) &&
+    this.edges == that.edges &&
+    this.bottomValue == that.bottomValue
+  }
+}
+
+object RGA extends CmRDTProof1[RGAOp, RGAMsg, RGA]

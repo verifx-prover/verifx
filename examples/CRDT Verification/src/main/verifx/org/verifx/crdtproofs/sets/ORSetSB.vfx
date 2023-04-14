@@ -1,0 +1,48 @@
+import org.verifx.crdtproofs.lemmas.CvRDT
+import org.verifx.crdtproofs.lemmas.CvRDTProof2
+import org.verifx.crdtproofs.LamportClock
+
+///////////////////////////////////////////////////////////////////
+// Simple but inefficient implementation of a State-based OR-Set //
+///////////////////////////////////////////////////////////////////
+
+class ORSet[V, T](observed: Map[V, Set[T]] = new Map[V, Set[T]],
+                  removed: Map[V, Set[T]] = new Map[V, Set[T]]) extends CvRDT[ORSet[V, T]] {
+
+  def contains(e: V) = {
+    val observedTags = this.observed.getOrElse(e, new Set[T])
+    val removedTags = this.removed.getOrElse(e, new Set[T])
+    val diff = observedTags.diff(removedTags)
+    diff.nonEmpty()
+  }
+
+  def add(e: V, tag: T) = {
+    val observedTags = this.observed.getOrElse(e, new Set[T])
+    val newObserved = observedTags.add(tag)
+    new ORSet(this.observed.add(e, newObserved), this.removed)
+  }
+
+  def remove(e: V) = {
+    val observedTags = this.observed.getOrElse(e, new Set[T])
+    val removedTags = this.removed.getOrElse(e, new Set[T])
+    val newRemoved = removedTags.union(observedTags)
+    new ORSet(this.observed, this.removed.add(e, newRemoved))
+  }
+
+  private def mergeTags(tags1: Set[T], tags2: Set[T]) = tags1.union(tags2)
+
+  def merge(that: ORSet[V, T]) = {
+    val mergedObserved = this.observed.combine(that.observed, this.mergeTags _)
+    val mergedRemoved = this.removed.combine(that.removed, this.mergeTags _)
+    new ORSet(mergedObserved, mergedRemoved)
+  }
+
+  def compare(that: ORSet[V, T]) = {
+    this.observed.keys().subsetOf(that.observed.keys()) &&
+    this.removed.keys().subsetOf(that.removed.keys()) &&
+    this.observed.zip(that.observed).values().forall((tags: Tuple[Set[T], Set[T]]) => tags.fst.subsetOf(tags.snd)) &&
+    this.removed.zip(that.removed).values().forall((tags: Tuple[Set[T], Set[T]]) => tags.fst.subsetOf(tags.snd))
+  }
+}
+
+object ORSet extends CvRDTProof2[ORSet]

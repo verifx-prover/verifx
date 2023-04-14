@@ -1,0 +1,44 @@
+import org.verifx.crdtproofs.lemmas.DeltaCRDT
+import org.verifx.crdtproofs.lemmas.CvRDTProof1
+
+/*
+ * Implementation of a delta state-based Last-Writer Wins Set with remove-wins bias (Soundcloud inspired),
+ * based on Carlos Baquero's C++ implementation:
+ *  https://github.com/CBaquero/delta-enabled-crdts/blob/master/delta-crdts.cc
+ */
+
+class RWLWWSet[V](s: Map[V, Tuple[Int, Boolean]] = new Map[V, Tuple[Int, Boolean]]()) extends DeltaCRDT[RWLWWSet[V]] {
+  private def addrmv(ts: Int, v: V, b: Boolean) = {
+    val a = new Tuple(ts, b)
+    val newS = new Map[V, Tuple[Int, Boolean]]().add(v, a)
+    new RWLWWSet(newS)
+  }
+
+  def add(ts: Int, v: V) =
+    this.addrmv(ts, v, false)
+
+  def rmv(ts: Int, v: V) =
+    this.addrmv(ts, v, true)
+
+  def contains(v: V) =
+    this.s.contains(v) && !this.s.get(v).snd
+
+  private def join(x: Boolean, y: Boolean) =
+    x || y // remove-wins; if one of the two is `true` this results in `true` (an element is considered to not be in the set if it is tagged with `true`)
+
+  private def lexjoin(l: Tuple[Int, Boolean], r: Tuple[Int, Boolean]) = {
+    if (r == l)
+      r
+    else if (l.fst > r.fst)
+      l
+    else if (r.fst > l.fst)
+      r
+    else // So r.fst == l.fst
+      new Tuple(r.fst, this.join(r.snd, l.snd))
+  }
+
+  def merge(delta: RWLWWSet[V]) =
+    new RWLWWSet(this.s.combine(delta.s, this.lexjoin _))
+}
+
+object RWLWWSet extends CvRDTProof1[RWLWWSet]

@@ -1,0 +1,32 @@
+import org.verifx.crdtproofs.delta.DotKernel
+import org.verifx.crdtproofs.lemmas.DeltaCRDT
+import org.verifx.crdtproofs.lemmas.CvRDTProof2
+
+/*
+ * Implementation of an optimized delta state-based Observed-Removed Set CRDT that does not use tombstones
+ * but uses a causal context instead.
+ * The implementation corresponds to Fig. 3b in Delta CRDT paper and is based on Carlos Baquero's C++ implementation:
+ *  https://github.com/CBaquero/delta-enabled-crdts/blob/master/delta-crdts.cc
+ */
+
+class DeltaOptimizedORSet[V, ID](dk: DotKernel[V, ID] = new DotKernel[V, ID]()) extends DeltaCRDT[DeltaOptimizedORSet[V, ID]] {
+  def add(elem: V, dot: Dot[ID]) = {
+    val removedKernel = this.dk.rmv(elem) // optimization that first removes the element
+    val addedKernel = this.dk.add(dot, elem)
+    new DeltaOptimizedORSet(removedKernel.merge(addedKernel))
+  }
+
+  def remove(elem: V) =
+    new DeltaOptimizedORSet(this.dk.rmv(elem))
+
+  def elements() =
+    this.dk.read()
+
+  def contains(elem: V) =
+    this.elements().contains(elem)
+
+  def merge(delta: DeltaOptimizedORSet[V, ID]) =
+    new DeltaOptimizedORSet(this.dk.merge(delta.dk))
+}
+
+object DeltaOptimizedORSet extends CvRDTProof2[DeltaOptimizedORSet]

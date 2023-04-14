@@ -1,3 +1,0 @@
-import be.vub.crdtproofs.VersionVector
-
-class TaggedOp[Op](t: VersionVector, o: Op)

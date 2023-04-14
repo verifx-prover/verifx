@@ -1,0 +1,61 @@
+import org.verifx.crdtproofs.lemmas.CmRDT
+import org.verifx.crdtproofs.lemmas.CmRDTProof1
+import org.verifx.crdtproofs.graphs.Edge
+
+/*
+ * Operation-based implementation of an Add-only Monotonic DAG CRDT.
+ * The implementation corresponds to Specification 17 in the paper "A Comprehensive Study Of CRDTs".
+ * We removed the `path` assumption from the source precondition because it requires recursion.
+ * This is safe to do because by removing it from the source precondition, we prove a stronger lemma.
+ */
+
+object Op {
+  enum DAGOp[V] {
+    AddEdge(from: V, to: V) | AddBetween(u: V, v: V, w: V)
+  }
+}
+
+class AddOnlyDAG[V](vertices: Set[V], edges: Set[Edge[V]]) extends CmRDT[DAGOp[V], DAGOp[V], AddOnlyDAG[V]] {
+  def hasVertex(vertex: V) =
+    this.vertices.contains(vertex)
+
+  def hasEdge(edge: Edge[V]) =
+    this.edges.contains(edge)
+
+  def preAddEdge(from: V, to: V) = {
+    this.hasVertex(from) &&
+    this.hasVertex(to)
+  }
+
+  def addEdge(from: V, to: V) = {
+    new AddOnlyDAG(
+      this.vertices,
+      this.edges.add(new Edge(from, to)))
+  }
+
+  def preAddBetween(u: V, v: V, w: V) = {
+    this.hasVertex(u) &&
+    this.hasVertex(w)
+  }
+
+  // Adds a new vertex `v` between `u` and `w`
+  def addBetween(u: V, v: V, w: V) = {
+    new AddOnlyDAG(
+      this.vertices.add(v),
+      this.edges.add(new Edge(u, v)).add(new Edge(v, w)))
+  }
+
+  override def enabledSrc(op: DAGOp[V]) = op match {
+    case AddEdge(from, to) => this.preAddEdge(from, to)
+    case AddBetween(u, v, w) => this.preAddBetween(u, v, w)
+  }
+
+  def prepare(op: DAGOp[V]) = op // prepare phase does not add extra information
+
+  def effect(op: DAGOp[V]) = op match {
+    case AddEdge(from, to) => this.addEdge(from, to)
+    case AddBetween(u, v, w) => this.addBetween(u, v, w)
+  }
+}
+
+object AddOnlyDAG extends CmRDTProof1[DAGOp, DAGOp, AddOnlyDAG]

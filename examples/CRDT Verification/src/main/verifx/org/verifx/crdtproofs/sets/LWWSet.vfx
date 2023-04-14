@@ -1,0 +1,61 @@
+import org.verifx.crdtproofs.lemmas.CvRDT
+import org.verifx.crdtproofs.lemmas.CvRDTProof1
+import org.verifx.crdtproofs.VersionVector
+
+/*
+ * Implementation of a Last-Writer-Wins Set.
+ * Keeps two sets: `adds` and `removes`.
+ * When adding/removing elements we tag the element with a timestamp and add it to the `adds`, respectively, the `removes` set.
+ * An element is in the set if it is in the `adds` set and it is not in the `removes` set with a later timestamp.
+ * Hence, if users concurrently add and remove the same element, it will be considered in the set.
+ * IMPORTANT: It must be possible to determine the order of events from the elements' timestamps.
+ *            Hence, lamport clocks are not sufficient, since LC1(e1) > LC2(e2) does not imply that `e1` happened-after `e2`.
+ *            Instead, we use Version Vectors.
+ *
+ * Note that this implementation corresponds to the implementation proposed in:
+ *   Marc Shapiro, Nuno Preguiça, Carlos Baquero, Marek Zawirski.
+ *   A comprehensive study of Convergent and Commutative Replicated Data Types.
+ *   [Research Report] RR-7506, Inria – Centre Paris- Rocquencourt; INRIA. 2011, pp.50. <inria-00555588>
+ */
+
+class LWWSet[V](adds: Set[Tuple[V, VersionVector]] = new Set[Tuple[V, VersionVector]](),
+                removes: Set[Tuple[V, VersionVector]] = new Set[Tuple[V, VersionVector]]()) extends CvRDT[LWWSet[V]] {
+
+  def add(element: V, timestamp: VersionVector) = {
+    val tup = new Tuple(element, timestamp)
+    new LWWSet(this.adds.add(tup), this.removes)
+  }
+
+  def remove(element: V, timestamp: VersionVector) = {
+    val tup = new Tuple(element, timestamp)
+    new LWWSet(this.adds, this.removes.add(tup))
+  }
+
+  def lookup(element: V) = {
+    // An element e is in the set if it is in `adds`, and it is not in `removes` with a higher timestamp:
+    // lookup(e) = ∃t,∀t′ > t : (e,t) ∈ A ∧ (e,t′) ∈/ R)
+    this.adds.exists((addTup: Tuple[V, VersionVector]) => {
+      val addedElem = addTup.fst
+      val addTime = addTup.snd
+      element == addedElem &&
+      !this.removes.exists((remTup: Tuple[V, VersionVector]) => {
+        val removedElem = remTup.fst
+        val removeTime = remTup.snd
+        element == removedElem && removeTime.after(addTime)
+      })
+    })
+  }
+
+  def merge(that: LWWSet[V]) = {
+    val mergedAdds = this.adds.union(that.adds)
+    val mergedRemoves = this.removes.union(that.removes)
+    new LWWSet(mergedAdds, mergedRemoves)
+  }
+
+  def compare(that: LWWSet[V]) = {
+    this.adds.subsetOf(that.adds) &&
+    this.removes.subsetOf(that.removes)
+  }
+}
+
+object LWWSet extends CvRDTProof1[LWWSet]

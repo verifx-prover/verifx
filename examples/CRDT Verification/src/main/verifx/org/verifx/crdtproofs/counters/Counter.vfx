@@ -1,0 +1,26 @@
+import org.verifx.crdtproofs.lemmas.CmRDT
+import org.verifx.crdtproofs.lemmas.CmRDTProof
+
+///////////////////////////////////
+// Operation-based Counter CRDT //
+/////////////////////////////////
+
+object Op {
+  enum CtrOp {
+    Inc() | Dec()
+  }
+}
+
+class Counter(ctr: Int = 0) extends CmRDT[CtrOp, CtrOp, Counter] {
+  def increment() = new Counter(this.ctr + 1)
+  def decrement() = new Counter(this.ctr - 1)
+
+  def prepare(op: CtrOp) = op // prepare phase does not add extra information
+
+  def effect(op: CtrOp) = op match {
+    case Inc() => this.increment()
+    case Dec() => this.decrement()
+  }
+}
+
+object Counter extends CmRDTProof[CtrOp, CtrOp, Counter]

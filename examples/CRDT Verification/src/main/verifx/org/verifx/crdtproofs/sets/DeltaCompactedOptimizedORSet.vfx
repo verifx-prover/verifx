@@ -1,0 +1,137 @@
+import org.verifx.crdtproofs.sets.Tag
+import org.verifx.crdtproofs.sets.TaggedElement
+import org.verifx.crdtproofs.lemmas.DeltaCRDT
+import org.verifx.crdtproofs.lemmas.CvRDTProof2
+import org.verifx.crdtproofs.VersionMap
+
+/*
+ * Implementation of an optimized delta state-based Observed-Removed Set CRDT with compaction of the causal context.
+ * The implementation is based on the causal context compression described in the Delta CRDT paper for Fig. 3b.
+ */
+
+class DeltaCompactedOptimizedORSet[V, ID](set: Set[TaggedElement[V, ID]] = new Set[TaggedElement[V, ID]](),
+                                          causalCtx: VersionMap[ID] = new VersionMap[ID]()) extends DeltaCRDT[DeltaCompactedOptimizedORSet[V, ID]] {
+  override def reachable(): Boolean = {
+    this.causalCtx.vmap.values().forall((count: Int) => count >= 0) && // the versions cannot be negative
+    // Your causal context must at least have observed everything that is in the set
+    // because when you generate or receive an `add` you also add update the causal context
+    // to reflect that add
+    this.set.forall((tElem: TaggedElement[V, ID]) => {
+      val replica = tElem.tag.replicaID
+      val count = tElem.tag.count
+      count > 0 &&
+      this.causalCtx.contains(replica) &&
+      (this.causalCtx.get(replica) >= count)
+    })
+  }
+
+  def add(elem: V, tag: Tag[ID]) = {
+    val taggedElem = new TaggedElement(tag, elem)
+    new DeltaCompactedOptimizedORSet(
+      new Set[TaggedElement[V, ID]]().add(taggedElem), // singleton set containing the tagged element
+      new VersionMap[ID](new Map[ID, Int]().add(tag.replicaID, tag.count))) // make a VersionMap containing only our version number
+  }
+
+  /*
+  def remove(elem: V) = {
+    // keep only the biggest tags for this element, then transform it to a set of tuples and then to a map
+    val ctxForThisElem =
+      this
+        .set
+        .filter((tElem: TaggedElement[V, ID]) => tElem.element == elem) // keep only the tags for this element
+        // keep only the biggest tag per replica
+        .filter(
+          (tElem: TaggedElement[V, ID]) => {
+            val count = tElem.tag.count
+            val replica = tElem.tag.replicaID
+            !this.set.exists((otherElem: TaggedElement[V, ID]) => {
+              (otherElem.tag.replicaID == replica) &&
+              (otherElem.tag.count > count)
+            })
+          }
+        )
+        .map(
+          (tElem: TaggedElement[V, ID]) => {
+            val count = tElem.tag.count
+            val replica = tElem.tag.replicaID
+            new Tuple(replica, count)
+          })
+        .toMap
+
+    /*
+    val ctxForThisElem =
+      this
+        .causalCtx
+        .filter(
+          (replica: ID, count: Int) =>
+            this.set.exists(
+              (tElem: TaggedElement[V, ID]) => {
+                (tElem.element == elem) &&
+                (tElem.tag.replicaID == replica)
+              }))
+    */
+
+    new DeltaCompactedOptimizedORSet(
+      new Set[TaggedElement[V, ID]](), // empty set of elements
+      // keep only the entries in the causal context that contributed to this element:
+      new VersionMap(ctxForThisElem))
+  }
+  */
+
+  def elements() = {
+    this
+      .set
+      .map((taggedElem: TaggedElement[V, ID]) => taggedElem.element) // keep only the element, i.e. remove the tags
+  }
+
+  def contains(elem: V) = this.elements().contains(elem)
+
+  def merge(delta: DeltaCompactedOptimizedORSet[V, ID]) = {
+     val setIntersects = this.set.intersect(delta.set)
+     // keep only the elements that are not in the causal context of the other (i.e. that were not observed by the other)
+     // such elements have a tag: (replica, count) whose count is bigger than the latest known count for replica in the other's causal context
+     val keepElemsNotInCtx = (s: Set[TaggedElement[V, ID]], ctx: VersionMap[ID]) => s.filter((taggedElem: TaggedElement[V, ID]) => taggedElem.tag.count > ctx.get(taggedElem.tag.replicaID))
+     val myElementsNotInDeltaContext = keepElemsNotInCtx(this.set, delta.causalCtx)
+     val deltaElementsNotInMyContext = keepElemsNotInCtx(delta.set, this.causalCtx)
+
+     new DeltaCompactedOptimizedORSet[V, ID](
+       setIntersects.union(myElementsNotInDeltaContext).union(deltaElementsNotInMyContext),
+       this.causalCtx.sync(delta.causalCtx))
+  }
+}
+
+object DeltaCompactedOptimizedORSet extends CvRDTProof2[DeltaCompactedOptimizedORSet] {
+  /*
+  proof providesAddWinsSemantics {
+      // Create 2 replicas
+      val r1 = new DeltaCompactedOptimizedORSet[Int, String]()
+      val r2 = new DeltaCompactedOptimizedORSet[Int, String]()
+
+      // r1 adds 5
+      val deltaAdd5 = r1.add(5, new Tag("r1", 1))
+      val r11 = r1.merge(deltaAdd5)
+
+      // r2 concurrently adds 5 and removes 5
+      val deltaAdd5r2 = r2.add(5, new Tag("r2", 1))
+      val r22 = r2.merge(deltaAdd5r2)
+      val deltaRmv5 = r22.remove(5)
+      val r222 = r22.merge(deltaRmv5)
+
+      // incorporate delta from r1 in r222
+      val r2222 = r222.merge(deltaAdd5) // 5 should now be in the set again because r1's add(5) wins over r2's remove(5)
+
+      // incorporate deltas from r2 in r1
+      val r111 = r11.merge(deltaAdd5r2)
+      val r1111 = r111.merge(deltaRmv5)
+
+      r1.elements().isEmpty() &&
+      (r11.elements() == new Set[Int]().add(5))
+      r11.contains(5) &&
+      r22.contains(5) &&
+      (r222.elements() == new Set[Int]()) && // 5 is no longer in the set
+      r2222.contains(5) &&
+      r111.contains(5) &&
+      r1111.contains(5)
+  }
+  */
+}

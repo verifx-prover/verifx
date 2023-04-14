@@ -1,0 +1,3 @@
+import org.verifx.crdtproofs.VersionVector
+
+class TaggedOp[Op](t: VersionVector, o: Op)

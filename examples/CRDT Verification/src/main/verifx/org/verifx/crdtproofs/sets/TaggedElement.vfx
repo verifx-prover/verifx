@@ -1,0 +1,3 @@
+import org.verifx.crdtproofs.sets.Tag
+
+class TaggedElement[V, ID](tag: Tag[ID], element: V)

@@ -1,0 +1,31 @@
+import org.verifx.crdtproofs.lemmas.CvRDT
+import org.verifx.crdtproofs.lemmas.CvRDTProof1
+import org.verifx.crdtproofs.counters.DGCounter
+
+/*
+ * Implementation of a Dynamic Positive-Negative Counter as a composition of two Dynamic Grow-Only Counters.
+ * This design supports a dynamic number of replicas and is similar to the Positive-Negative Counter used in Riak.
+ */
+
+class DPNCounter[ID](p: DGCounter[ID] = new DGCounter[ID](), n: DGCounter[ID] = new DGCounter[ID]()) extends CvRDT[DPNCounter[ID]] {
+  def increment(replica: ID) = {
+    val incrementedPCounter = this.p.increment(replica)
+    new DPNCounter(incrementedPCounter, this.n)
+  }
+
+  def decrement(replica: ID) = {
+    val incrementedNCounter = this.n.increment(replica)
+    new DPNCounter(this.p, incrementedNCounter)
+  }
+
+  def value(replicas: Vector[ID]): Int =
+    this.p.value(replicas) - this.n.value(replicas)
+
+  def merge(that: DPNCounter[ID]) =
+    new DPNCounter(this.p.merge(that.p), this.n.merge(that.n))
+
+  def compare(that: DPNCounter[ID]) = false // not used because we override `equals`
+  override def equals(that: DPNCounter[ID]) = this == that
+}
+
+object DPNCounter extends CvRDTProof1[DPNCounter]

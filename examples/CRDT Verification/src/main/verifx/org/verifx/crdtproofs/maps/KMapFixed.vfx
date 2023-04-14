@@ -1,0 +1,177 @@
+import org.verifx.crdtproofs.LamportClock
+import org.verifx.crdtproofs.lemmas.CmRDT
+import org.verifx.crdtproofs.lemmas.CmRDTProof2
+
+/*
+ * Implementation of the fix for the buggy Map tweeted by Martin Kleppmann and described in Algorithm 2 of his technical report:
+ *   https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-969.pdf
+ */
+
+object Ops {
+  enum MapOp[K, V] {
+    Put(k: K, v: V) |
+    Delete(k: K)
+  }
+
+  enum MapMsg[K, V] {
+    PutMsg(T: Set[LamportClock], t: LamportClock, k: K, v: V) |
+    DeleteMsg(T: Set[LamportClock], k: K) |
+    NopMsg()
+  }
+}
+
+class KMapFixed[K, V](clock: LamportClock, values: Map[K, Map[LamportClock, V]]) extends CmRDT[MapOp[K, V], MapMsg[K, V], KMapFixed[K, V]] {
+  private def getStampedValues(k: K): Map[LamportClock, V] = {
+    this.values.getOrElse(k, new Map[LamportClock, V]())
+  }
+
+  // fetches all the timestamps observed for this key
+  def getTimestampsForKey(k: K): Set[LamportClock] = {
+    this.getStampedValues(k).keys()
+  }
+
+  // If the key exists in the map it will return a set with 1 value,
+  // otherwise, it will return an empty set.
+  def get(k: K): Set[V] = {
+    val vs = this.getStampedValues(k)
+    // Keep only the entry with the biggest timestamp by filtering out all entries for which a bigger timestamp exists
+    vs.filter((t: LamportClock, v: V) => {
+      !vs.keys().exists((t2: LamportClock) => t.smaller(t2))
+    }).values()
+  }
+
+  def preparePut(k: K, v: V) = {
+    val T = this.getTimestampsForKey(k)
+    val t = this.clock // new timestamp for this operation
+    new PutMsg(T, t, k, v)
+  }
+
+  def put(T: Set[LamportClock], t: LamportClock, k: K, v: V) = {
+    val newClock = this.clock.sync(t)
+    val newValuesForKey =
+      this.getStampedValues(k)
+          .filter((t2: LamportClock, v2: V) => {
+            !T.contains(t2) // Keep only the values that are not overwritten by T
+          })
+          .add(t, v) // add the value `v` under timestamp `t`
+
+    new KMapFixed(newClock, this.values.add(k, newValuesForKey))
+  }
+
+  def prepareDelete(k: K) = {
+    val T = this.getTimestampsForKey(k)
+    if (T.nonEmpty()) {
+      new DeleteMsg[K, V](T, k)
+    }
+    else {
+      new NopMsg[K, V]()
+    }
+  }
+
+  def delete(T: Set[LamportClock], k: K) = {
+    val newValuesForKey =
+      this.getStampedValues(k)
+          .filter((t2: LamportClock, v: V) => {
+            !T.contains(t2) // only keep the values that are not deleted by T
+          })
+
+    new KMapFixed(this.clock, this.values.add(k, newValuesForKey))
+  }
+
+  // Checks a predicate for all timestamps in the map
+  def forallTimestamps(f: LamportClock => Boolean): Boolean = {
+    this.values.values().forall((valueMaps: Map[LamportClock, V]) => {
+      valueMaps.keys().forall((t: LamportClock) => {
+        f(t)
+      })
+    })
+  }
+
+  def correctTimestamps(): Boolean = {
+    // All the values in the map must have a timestamp < than our local clock (since we sync our clock on incoming updates)
+    this.forallTimestamps((t: LamportClock) => t.counter < this.clock.counter) &&
+    // every value must have unique timestamps
+    !(exists(k1: K, k2: K) {
+      k1 != k2 &&
+      this.getTimestampsForKey(k1).intersect(this.getTimestampsForKey(k2)).nonEmpty() // distinct keys may not contain the same timestamp because timestamps are globally unique
+    })
+  }
+
+  override def compatibleS(that: KMapFixed[K, V]) = {
+    (this.clock.replica != that.clock.replica) && // replicas have unique IDs
+    this.correctTimestamps() &&
+    that.correctTimestamps() &&
+    // we cannot have observed a value from the future of the other replica
+    this.forallTimestamps((t: LamportClock) => {
+      (t.replica == that.clock.replica) =>: t.counter < that.clock.counter
+    }) &&
+    // the other cannot have observed a value from our future
+    that.forallTimestamps((t: LamportClock) => {
+      (t.replica == this.clock.replica) =>: t.counter < this.clock.counter
+    }) &&
+    // it cannot be that we observed the same timestamp for different keys because timestamps are globally unique
+    !(exists(k1: K, k2: K) {
+      k1 != k2 &&
+      this.getTimestampsForKey(k1).intersect(that.getTimestampsForKey(k2)).nonEmpty()
+    })
+  }
+
+  def prepare(op: MapOp[K, V]) = op match {
+    case Put(k, v) => this.preparePut(k, v)
+    case Delete(k) => this.prepareDelete(k)
+  }
+
+  def effect(msg: MapMsg[K, V]) = msg match {
+    case PutMsg(ts, t, k, v) => this.put(ts, t, k, v)
+    case DeleteMsg(ts, k) => this.delete(ts, k)
+    case NopMsg() => this
+  }
+
+  override def equals(that: KMapFixed[K, V]) = {
+    this.values == that.values
+  }
+}
+
+object KMapFixed {
+  def commute[K, V](s1: KMapFixed[K, V], s2: KMapFixed[K, V], s3: KMapFixed[K, V], x: MapMsg[K, V], y: MapMsg[K, V]) = {
+    (s1.reachable() && s2.reachable() && s3.reachable() &&
+      s1.compatibleS(s2) && s1.compatibleS(s3) && s2.compatibleS(s3)) =>: {
+       s3.effect(x).effect(y).equals(s3.effect(y).effect(x)) &&
+       s3.effect(x).reachable() &&
+       s3.effect(y).reachable() &&
+       s3.effect(x).effect(y).reachable()
+    }
+  }
+
+  proof putPutCommute[K, V] {
+    forall (s1: KMapFixed[K, V], s2: KMapFixed[K, V], s3: KMapFixed[K, V], k1: K, k2: K, v1: V, v2: V) {
+      val x = s1.preparePut(k1, v1)
+      val y = s2.preparePut(k2, v2)
+      this.commute(s1, s2, s3, x, y)
+    }
+  }
+
+  proof putDelCommute[K, V] {
+    forall (s1: KMapFixed[K, V], s2: KMapFixed[K, V], s3: KMapFixed[K, V], k1: K, v1: V, k2: K) {
+      val x = s1.preparePut(k1, v1)
+      val y = s2.prepareDelete(k2)
+      this.commute(s1, s2, s3, x, y)
+    }
+  }
+
+  proof delPutCommute[K, V] {
+    forall (s1: KMapFixed[K, V], s2: KMapFixed[K, V], s3: KMapFixed[K, V], k1: K, k2: K, v2: V) {
+      val x = s1.prepareDelete(k1)
+      val y = s2.preparePut(k2, v2)
+      this.commute(s1, s2, s3, x, y)
+    }
+  }
+
+  proof delDelCommute[K, V] {
+    forall (s1: KMapFixed[K, V], s2: KMapFixed[K, V], s3: KMapFixed[K, V], k1: K, k2: K) {
+      val x = s1.prepareDelete(k1)
+      val y = s2.prepareDelete(k2)
+      this.commute(s1, s2, s3, x, y)
+    }
+  }
+}

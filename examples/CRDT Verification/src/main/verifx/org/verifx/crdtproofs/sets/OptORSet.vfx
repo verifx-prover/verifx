@@ -1,0 +1,107 @@
+import org.verifx.crdtproofs.lemmas.CvRDT
+import org.verifx.crdtproofs.lemmas.CvRDTProof1
+
+/*
+ * Implementation of the optimized ORSet described in:
+ *   Bieniusa, Annette, et al.
+ *   "An optimized conflict-free replicated set."
+ *   arXiv preprint arXiv:1210.3368 (2012).
+ *
+ * The implementation is based on figure 3 from the paper above.
+ */
+
+class Element[V](value: V, timestamp: Int, replica: Int)
+
+class OptORSet[V](myID: Int, v: Vector[Int], elements: Set[Element[V]] = new Set[Element[V]]) extends CvRDT[OptORSet[V]] {
+  // The `elements` set does not contain old values that were already overridden
+  override def reachable(): Boolean = {
+    // The replica's ID is an integer in [0, v.size[
+    this.myID >= 0 &&
+    this.myID < this.v.size &&
+    // The optimized OR-Set only keeps the latest clock for each element of each replica
+    // so it cannot be there are 2 elements in the set with the same value, coming from the same replica, but with different timestamps.
+    !exists(e1: Element[V], e2: Element[V]) {
+      this.elements.contains(e1) &&
+      this.elements.contains(e2) &&
+      e1.value == e2.value && e1.replica == e2.replica && e1.timestamp != e2.timestamp
+    } &&
+    // This replica cannot have observed a counter that is greater than the counter of that replica
+    this.elements.forall((e: Element[V]) => {
+      e.timestamp <= this.v.get(e.replica)
+    }) &&
+    // The vector is well-formed
+    // i.e. contains only entries for [0, size[ and every entry is an integer >= 0
+    forall (i: Int) {
+      if (i >= 0 && i < this.v.size)
+        this.v.positions.contains(i) && this.v.get(i) >= 0
+      else
+        !this.v.positions.contains(i)
+    }
+  }
+
+  override def compatible(that: OptORSet[V]) = {
+    this.v.size == that.v.size
+  }
+
+  def contains(e: V) =
+    this.elements.exists((elem: Element[V]) => elem.value == e)
+
+  def elements(): Set[V] =
+    this.elements.map((e: Element[V]) => e.value)
+
+  def add(e: V): OptORSet[V] = {
+    val r = this.myID
+    val c = this.v.get(r) + 1
+
+    val o = this.elements.filter((elem: Element[V]) => elem.value == e && elem.timestamp < c)
+    val newV = this.v.write(r, c)
+    val triple = new Element(e, c, r)
+    val newElements = this.elements.add(triple).diff(o)
+
+    new OptORSet(this.myID, newV, newElements)
+  }
+
+  def remove(e: V): OptORSet[V] = {
+    val r = this.elements.filter((elem: Element[V]) => elem.value == e) // collect all unique triples containing e
+    val newElements = this.elements.diff(r)
+    new OptORSet(this.myID, this.v, newElements)
+  }
+
+  private def computeElementsInSinglePayload(that: OptORSet[V]): Set[Element[V]] = {
+    // Computes: { (e,c,i) ∈ E \ B.E | c > B.v[i] }
+    // where E = this.elements and B = that
+    this
+      .elements
+      .diff(that.elements) // E \ B.E
+      .filter((elem: Element[V]) => {
+        val c = elem.timestamp
+        val i = elem.replica
+        c > that.v.get(i) // c > B.v[i]
+      })
+  }
+
+  def merge(that: OptORSet[V]): OptORSet[V] = {
+    val m = this.elements.intersect(that.elements) // let M = (E ∩ B.E)
+    val mPrime = this.computeElementsInSinglePayload(that)
+    val mPrimePrime = that.computeElementsInSinglePayload(this)
+    val u = m.union(mPrime).union(mPrimePrime)
+    // let O = { (e,c,i) ∈ U | ∃(e,c',i) ∈ U : c < c' }
+    val o = u.filter((e1: Element[V]) => u.exists((e2: Element[V]) => e1.value == e2.value && e1.replica == e2.replica && e1.timestamp < e2.timestamp))
+    val newElements = u.diff(o) // E := U \ O
+    val max = (t: Tuple[Int, Int]) => if (t.fst >= t.snd) t.fst else t.snd
+    val newV = this.v.zip(that.v).map(max) // v := [max(v[0], B.v[0]), . . . , max(v[n], B.v[n])]
+
+    new OptORSet(this.myID, newV, newElements)
+  }
+
+  def compare(that: OptORSet[V]) = {
+    true // is not used since we override `equals`
+  }
+
+  override def equals(that: OptORSet[V]) = {
+    this.v == that.v &&
+    this.elements == that.elements
+  }
+}
+
+object OptORSet extends CvRDTProof1[OptORSet]

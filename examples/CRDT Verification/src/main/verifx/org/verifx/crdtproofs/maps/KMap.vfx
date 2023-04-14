@@ -1,0 +1,170 @@
+import org.verifx.crdtproofs.LamportClock
+import org.verifx.crdtproofs.lemmas.CmRDT
+import org.verifx.crdtproofs.lemmas.CmRDTProof2
+
+/*
+ * Implementation of the buggy Map tweeted by Martin Kleppmann and described in Algorithm 1 of his technical report:
+ *   https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-969.pdf
+ */
+
+object Ops {
+  enum MapOp[K, V] {
+    Put(k: K, v: V) |
+    Delete(k: K)
+  }
+
+  enum MapMsg[K, V] {
+    PutMsg(t: LamportClock, k: K, v: V) |
+    DeleteMsg(t: LamportClock, k: K) |
+    NopMsg()
+  }
+}
+
+class KMap[K, V](clock: LamportClock, values: Map[K, Tuple[LamportClock, V]]) extends CmRDT[MapOp[K, V], MapMsg[K, V], KMap[K, V]] {
+  def contains(k: K): Boolean = this.values.contains(k)
+  def get(k: K): V = this.values.get(k).snd
+
+  def preparePut(k: K, v: V) = {
+    val t = this.clock
+    new PutMsg(t, k, v)
+  }
+
+  def put(t: LamportClock, k: K, v: V) = {
+    val newClock = this.clock.sync(t)
+    if (!this.values.contains(k) || this.values.get(k).fst.smaller(t)) {
+      // this timestamp is bigger, override the value
+      new KMap(newClock, this.values.add(k, new Tuple(t, v)))
+    }
+    else {
+      // the other timestamp is bigger, don't override it
+      new KMap(newClock, this.values)
+    }
+  }
+
+  def prepareDelete(k: K) = {
+    if (this.values.contains(k)) {
+      val t = this.values.get(k).fst
+      new DeleteMsg[K, V](t, k)
+    }
+    else {
+      new NopMsg[K, V]()
+    }
+  }
+
+  def delete(t: LamportClock, k: K) = {
+    val newValues =
+      if (this.values.contains(k) && this.values.get(k).fst == t) {
+        // Delete it
+        this.values.remove(k)
+      }
+      else {
+        this.values
+      }
+
+    new KMap(
+      this.clock,
+      newValues
+    )
+  }
+
+  override def reachable(): Boolean = {
+    // All the values in the map must have a timestamp < than our local clock (since we sync our clock on incoming updates)
+    this.values.values().forall((entry: Tuple[LamportClock, V]) => entry.fst.counter < this.clock.counter) &&
+    // every value must have a unique timestamp
+    !(exists(k1: K, k2: K) {
+      k1 != k2 && this.values.get(k1).fst == this.values.get(k2).fst
+    })
+  }
+
+  private def noValueFromFuture(r1: KMap[K, V], r2: KMap[K, V]): Boolean = {
+    r1.values.values().forall((entry: Tuple[LamportClock, V]) => {
+      val t = entry.fst
+      (t.replica == r2.clock.replica) =>: t.counter < r2.clock.counter
+    })
+  }
+
+  override def compatibleS(that: KMap[K, V]) = {
+    (this.clock.replica != that.clock.replica) && // replicas have unique IDs
+    // we cannot have observed a value from the future of the other replica
+    this.noValueFromFuture(this, that) &&
+    // the other cannot have observed a value from our future
+    this.noValueFromFuture(that, this) &&
+    // it cannot be that we observed the same timestamp for different keys because timestamps are globally unique
+    !(exists(k1: K, k2: K) {
+      k1 != k2 && this.values.get(k1).fst == that.values.get(k2).fst
+    }) &&
+    // it cannot be that two replicas observed the same timestamp for the same key but with different values
+    // because a timestamp uniquely identifies one insert operation
+    !(exists(k: K) {
+      val thisTuple = this.values.get(k)
+      val thisTimestamp = thisTuple.fst
+      val thisValue = thisTuple.snd
+
+      val thatTuple = that.values.get(k)
+      val thatTimestamp = thatTuple.fst
+      val thatValue = thatTuple.snd
+
+      (thisTimestamp == thatTimestamp) &&
+      (thisValue != thatValue)
+    })
+  }
+
+  def prepare(op: MapOp[K, V]) = op match {
+    case Put(k, v) => this.preparePut(k, v)
+    case Delete(k) => this.prepareDelete(k)
+  }
+
+  def effect(msg: MapMsg[K, V]) = msg match {
+    case PutMsg(t, k, v) => this.put(t, k, v)
+    case DeleteMsg(t, k) => this.delete(t, k)
+    case NopMsg() => this
+  }
+
+  override def equals(that: KMap[K, V]) = {
+    this.values == that.values
+  }
+}
+
+object KMap {
+  def commute[K, V](s1: KMap[K, V], s2: KMap[K, V], s3: KMap[K, V], x: MapMsg[K, V], y: MapMsg[K, V]) = {
+    (s1.reachable() && s2.reachable() && s3.reachable() &&
+      s1.compatibleS(s2) && s1.compatibleS(s3) && s2.compatibleS(s3)) =>: {
+       s3.effect(x).effect(y).equals(s3.effect(y).effect(x)) &&
+       s3.effect(x).reachable() &&
+       s3.effect(y).reachable() &&
+       s3.effect(x).effect(y).reachable()
+    }
+  }
+
+  proof putPutCommute[K, V] {
+    forall (s1: KMap[K, V], s2: KMap[K, V], s3: KMap[K, V], k1: K, k2: K, v1: V, v2: V) {
+      val x = s1.preparePut(k1, v1)
+      val y = s2.preparePut(k2, v2)
+      this.commute(s1, s2, s3, x, y)
+    }
+  }
+
+  proof putDelCommute[K, V] {
+    forall (s1: KMap[K, V], s2: KMap[K, V], s3: KMap[K, V], k1: K, v1: V, k2: K) {
+      val x = s1.preparePut(k1, v1)
+      val y = s2.prepareDelete(k2)
+      this.commute(s1, s2, s3, x, y)
+    }
+  }
+
+  proof delPutCommute[K, V] {
+    forall (s1: KMap[K, V], s2: KMap[K, V], s3: KMap[K, V], k1: K, k2: K, v2: V) {
+      val x = s1.prepareDelete(k1)
+      val y = s2.preparePut(k2, v2)
+      this.commute(s1, s2, s3, x, y)
+    }
+  }
+
+  proof delDelCommute[K, V] {
+    forall (s1: KMap[K, V], s2: KMap[K, V], s3: KMap[K, V], k1: K, k2: K) {
+      val x = s1.prepareDelete(k1)
+      val y = s2.prepareDelete(k2)
+      this.commute(s1, s2, s3, x, y)
+    }
+  }
+}

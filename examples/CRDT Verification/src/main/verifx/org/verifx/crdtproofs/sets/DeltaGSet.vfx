@@ -1,0 +1,21 @@
+import org.verifx.crdtproofs.lemmas.DeltaCRDT
+import org.verifx.crdtproofs.lemmas.CvRDTProof1
+
+/*
+ * Implementation of a delta state-based Grow-Only Set CRDT.
+ * The implementation is based on Carlos Baquero's C++ implementation found here:
+ *   https://github.com/CBaquero/delta-enabled-crdts/blob/master/delta-crdts.cc
+ */
+
+class DeltaGSet[V](set: Set[V] = new Set[V]()) extends DeltaCRDT[DeltaGSet[V]] {
+  def add(v: V) =
+    new DeltaGSet(new Set[V]().add(v)) // singleton set containing `v`
+
+  def contains(v: V) =
+    this.set.contains(v)
+
+  def merge(delta: DeltaGSet[V]) =
+    new DeltaGSet(this.set.union(delta.set))
+}
+
+object DeltaGSet extends CvRDTProof1[DeltaGSet]

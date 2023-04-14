@@ -1,0 +1,25 @@
+import org.verifx.crdtproofs.lemmas.CvRDT
+import org.verifx.crdtproofs.lemmas.CvRDTProof
+import org.verifx.crdtproofs.counters.GCounter
+
+////////////////////////////////////////////
+// State-based Positive-Negative Counter //
+//////////////////////////////////////////
+
+class PNCounter(p: GCounter, n: GCounter) extends CvRDT[PNCounter] {
+  def value() = this.p.value() - this.n.value()
+
+  def increment(replica: Int) =
+    new PNCounter(this.p.increment(replica), this.n)
+
+  def decrement(replica: Int) =
+    new PNCounter(this.p, this.n.increment(replica))
+
+  def merge(that: PNCounter) =
+    new PNCounter(this.p.merge(that.p), this.n.merge(that.n))
+
+  def compare(that: PNCounter): Boolean =
+    this.p.compare(that.p) && this.n.compare(that.n)
+}
+
+object PNCounter extends CvRDTProof[PNCounter]

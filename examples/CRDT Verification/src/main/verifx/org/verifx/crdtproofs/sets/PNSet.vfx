@@ -1,0 +1,45 @@
+import org.verifx.crdtproofs.lemmas.CvRDT
+import org.verifx.crdtproofs.lemmas.CvRDTProof1
+import org.verifx.crdtproofs.counters.PNCounter
+
+class PNSet[V](elements: Map[V, PNCounter] = new Map[V, PNCounter]()) extends CvRDT[PNSet[V]] {
+  // The `emptyCounter` is passed as an argument because the `PNSet` does not know how many replicas there are,
+  // i.e. does not know how many entries the vector of the PNCounter should have
+  def add(element: V, replica: Int, emptyCounter: PNCounter) = {
+    val counter = this.elements.getOrElse(element, emptyCounter)
+    val newElements = this.elements.add(element, counter.increment(replica))
+    new PNSet(newElements)
+  }
+
+  def remove(element: V, replica: Int) = {
+    if (this.elements.contains(element)) {
+      val counter = this.elements.get(element)
+      val newElements = this.elements.add(element, counter.decrement(replica))
+      new PNSet(newElements)
+    }
+    else {
+      // Cannot remove an element we have not observed, hence, we do nothing
+      this
+    }
+  }
+
+  def lookup(element: V) = {
+    this.elements.contains(element) &&
+    this.elements.get(element).value() > 0
+  }
+
+  def merge(that: PNSet[V]) = {
+    val mergedElements = this.elements.combine(that.elements, (ctr1: PNCounter, ctr2: PNCounter) => ctr1.merge(ctr2))
+    new PNSet[V](mergedElements)
+  }
+
+  def compare(that: PNSet[V]) = {
+    this.elements.keys().subsetOf(that.elements.keys()) &&
+    this.elements
+      .zip(that.elements) // Map[V, Tuple[PNCounter, PNCounter]]
+      .values() // Set[Tuple[PNCounter, PNCounter]]
+      .forall((counters: Tuple[PNCounter, PNCounter]) => counters.fst.compare(counters.snd))
+  }
+}
+
+object PNSet extends CvRDTProof1[PNSet]

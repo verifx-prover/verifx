@@ -1,0 +1,26 @@
+import org.verifx.crdtproofs.lemmas.CmRDT
+
+trait CmRDTProof[Op, Msg, T <: CmRDT[Op, Msg, T]] {
+  proof is_a_CmRDT {
+    forall (s1: T, s2: T, s3: T, x: Op, y: Op) {
+      // Invoke 2 operations concurrently
+      val msg1 = s1.prepare(x) // replica s1 locally invokes operation `x` which prepares a message
+      val msg2 = s2.prepare(y) // replica s2 locally invokes operation `y` which prepares a message
+
+      ( s1.reachable() && s2.reachable() && s3.reachable() && //s1.equals(s2) &&
+          s1.enabledSrc(x) && s2.enabledSrc(y) &&
+            //s1.enabledDown(msg1) && s2.enabledDown(msg2) &&
+              s1.compatible(msg1, msg2) && s1.compatibleS(s2) && s1.compatibleS(s3) && s2.compatibleS(s3) ) =>: {
+
+        // The effectors must commute
+        s3.tryEffect(msg1).tryEffect(msg2).equals(s3.tryEffect(msg2).tryEffect(msg1)) &&
+        // The intermediate and resulting states must be reachable, if not there is an error in the definition of `reachable`
+        s3.tryEffect(msg1).reachable() &&
+        s3.tryEffect(msg2).reachable() &&
+        s3.tryEffect(msg1).tryEffect(msg2).reachable()
+      }
+    }
+  }
+}
+
+// TODO: also check that compatible is commutative!

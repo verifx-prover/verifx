@@ -1,0 +1,73 @@
+import org.verifx.crdtproofs.lemmas.CmRDT
+import org.verifx.crdtproofs.lemmas.CmRDTProof1
+
+/*
+ * Implementation of the Molli, Weiss, Skaf Set.
+ * Corresponds to Specification 14 in "A Comprehensive Study of CRDTs".
+ *
+ * In Spec 14, k' is unbound in the downstream of the `remove` operation.
+ * We believe it should be defined as the count of the element at the downstream (Option 1).
+ * It could also be the count of the element at the source replica (Option 2).
+ * This file implements Option 1.
+ * VeriFx proves that Option 1 is correct and Option 2 is wrong.
+ */
+
+object Op {
+  enum SetOp[V] {
+    Add(e: V) | Remove(e: V)
+  }
+
+  enum SetMsg[V] {
+    AddMsg(e: V, dt: Int) | RemoveMsg(e: V)
+  }
+}
+
+class MWSSet1[V](elements: Map[V, Int] = new Map[V, Int]) extends CmRDT[SetOp[V], SetMsg[V], MWSSet1[V]] {
+  def lookup(e: V) = this.elements.getOrElse(e, 0) > 0
+
+  def add(e: V): SetMsg[V] = {
+    // The idea here is that if the element has count -5
+    // the downstream will add 6 such that the count becomes 1
+    val count = this.elements.getOrElse(e, 0)
+    val delta =
+      if (count <= 0)
+        (count * -1) + 1 // take the absolute value and add 1
+      else
+        1
+    new AddMsg(e, delta)
+  }
+
+  def addDownstream(e: V, dt: Int): MWSSet1[V] = {
+    //val e = tup.fst
+    //val dt = tup.snd
+    val count = this.elements.getOrElse(e, 0)
+    new MWSSet1(this.elements.add(e, count + dt))
+  }
+
+  def preRemove(e: V) = this.lookup(e)
+
+  // Option 1
+  def remove(e: V): SetMsg[V] = new RemoveMsg(e)
+
+  def removeDownstream(e: V): MWSSet1[V] = {
+    val count = this.elements.getOrElse(e, 0)
+    new MWSSet1(this.elements.add(e, count - 1))
+  }
+
+  override def enabledSrc(op: SetOp[V]) = op match {
+    case Add(_) => true // `add` has no source precondition
+    case Remove(e) => this.preRemove(e)
+  }
+
+  def prepare(op: SetOp[V]) = op match {
+    case Add(e) => this.add(e)
+    case Remove(e) => this.remove(e)
+  }
+
+  def effect(msg: SetMsg[V]) = msg match {
+    case AddMsg(e, dt) => this.addDownstream(e, dt)
+    case RemoveMsg(e) => this.removeDownstream(e)
+  }
+}
+
+object MWSSet1 extends CmRDTProof1[SetOp, SetMsg, MWSSet1]

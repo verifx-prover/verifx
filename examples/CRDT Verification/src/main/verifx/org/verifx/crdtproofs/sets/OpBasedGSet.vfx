@@ -1,0 +1,29 @@
+import org.verifx.crdtproofs.lemmas.CmRDT
+import org.verifx.crdtproofs.lemmas.CmRDTProof1
+
+/*
+ * Implementation of an operation-based Grow-Only Set CRDT.
+ * An operation-based Grow-Only Set CRDT is used in AntidoteDB.
+ */
+
+object Op {
+  enum SetOp[V] {
+    Add(x: V)
+  }
+}
+
+class OpBasedGSet[V](set: Set[V] = new Set[V]()) extends CmRDT[SetOp[V], SetOp[V], OpBasedGSet[V]] {
+  def contains(x: V) = this.set.contains(x)
+  def add(x: V) = new Add(x)
+  def addDownstream(x: V) = new OpBasedGSet(this.set.add(x))
+
+  def prepare(op: SetOp[V]) = op match {
+    case Add(e) => this.add(e)
+  }
+
+  def effect(msg: SetOp[V]) = msg match {
+    case Add(x) => this.addDownstream(x)
+  }
+}
+
+object OpBasedGSet extends CmRDTProof1[SetOp, SetOp, OpBasedGSet]

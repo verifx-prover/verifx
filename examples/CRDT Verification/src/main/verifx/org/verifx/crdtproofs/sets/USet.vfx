@@ -1,0 +1,57 @@
+import org.verifx.crdtproofs.lemmas.CmRDT
+import org.verifx.crdtproofs.lemmas.CmRDTProof1
+
+object Op {
+  enum SetOp[V] {
+    Add(e: V) | Remove(e: V)
+  }
+}
+
+/*
+ * Operation-based implementation of a U-Set.
+ * Elements are unique, hence, every element will only be added once.
+ * Furthermore, we can only remove an element after having observed it.
+ * As a result, a removed element will never re-appear.
+ */
+
+class USet[V](elements: Set[V] = new Set[V]()) extends CmRDT[SetOp[V], SetOp[V], USet[V]] {
+  def lookup(e: V) = this.elements.contains(e)
+
+  def preAdd(e: V) = !this.lookup(e) // elements are unique, cannot add an existing element
+  def add(e: V) = new USet(this.elements.add(e))
+
+  def preRemove(e: V) = this.lookup(e) // precondition at source
+  def remove(e: V) = {
+    new USet(this.elements.remove(e))
+  }
+
+  // Used by `ContinuumSeq`
+  def forall(f: V => Boolean) = this.elements.forall(f)
+
+  override def compatible(x: SetOp[V], y: SetOp[V]) = x match {
+    case Add(e1) =>
+      y match {
+        case Add(e2) => e1 != e2 // elements are unique so replicas cannot add the same element
+        case Remove(e2) => e1 != e2 // there cannot be a concurrent add and remove of the same element (because it needs to be observed before removing it)
+      }
+    case Remove(e1) =>
+      y match {
+        case Add(e2) => e1 != e2 // there cannot be a concurrent add and remove of the same element
+        case Remove(e2) => true
+      }
+  }
+
+  override def enabledSrc(op: SetOp[V]) = op match {
+    case Add(e) => this.preAdd(e)
+    case Remove(e) => this.preRemove(e)
+  }
+
+  def prepare(op: SetOp[V]) = op // prepare phase does not add extra information
+
+  def effect(op: SetOp[V]) = op match {
+    case Add(e) => this.add(e)
+    case Remove(e) => this.remove(e)
+  }
+}
+
+object USet extends CmRDTProof1[SetOp, SetOp, USet]

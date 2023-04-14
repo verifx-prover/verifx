@@ -1,0 +1,45 @@
+import org.verifx.crdtproofs.lemmas.CvRDT
+import org.verifx.crdtproofs.lemmas.CvRDTProof
+
+/////////////////////////////////////////
+// State-based increment-only Counter //
+///////////////////////////////////////
+
+class GCounter(entries: Vector[Int]) extends CvRDT[GCounter] {
+  pre increment(replica: Int) {
+    replica >= 0 &&
+    replica < this.entries.size
+  }
+
+  def increment(replica: Int) = {
+    val count = this.entries.get(replica)
+    new GCounter(this.entries.write(replica, count + 1))
+  }
+
+  @recursive
+  private def computeValue(sum: Int = 0, replica: Int = 0): Int = {
+    if (replica >= 0 && replica < this.entries.size) {
+      val count = this.entries.get(replica)
+      this.computeValue(sum + count, replica + 1)
+    }
+    else
+      sum
+  }
+
+  def value() = this.computeValue()
+
+  private def max(t: Tuple[Int, Int]) = if (t.fst >= t.snd) t.fst else t.snd
+
+  def merge(that: GCounter): GCounter = {
+    val mergedEntries = this.entries.zip(that.entries).map(this.max _)
+    new GCounter(mergedEntries)
+  }
+
+  def compare(that: GCounter): Boolean = {
+    this.entries
+      .zip(that.entries)
+      .forall((tup: Tuple[Int, Int]) => tup.fst <= tup.snd)
+  }
+}
+
+object GCounter extends CvRDTProof[GCounter]
