@@ -138,12 +138,12 @@
  * Files can import other files using the `import` keyword but this should always occur at the top of the file before anything else:
  *
  * {{{
- *   import be.vub.crdtproofs.GCounter
+ *   import org.verifx.crdtproofs.GCounter
  * }}}
  *
  * Note that imports are different than in Scala.
  * The above import statement will import everything from the `GCounter` file
- * that should be located at `src/be/vub/crdtproofs/GCounter.vfx`.
+ * that should be located at `src/org/verifx/crdtproofs/GCounter.vfx`.
  * Thus, the import statement merely encodes the path to the file, starting from the `src` folder.
  *
  **/
