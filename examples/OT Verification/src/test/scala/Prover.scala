@@ -1,6 +1,6 @@
-import be.vub.verifx.Analysis.Proofs.{Aborted, ProofName, ProofResult, Proved, Rejected}
-import be.vub.verifx.Compiler.ProjectCompiler
-import be.vub.verifx.Utilities.Scanner
+import org.verifx.Analysis.Proofs.{Aborted, ProofName, ProofResult, Proved, Rejected}
+import org.verifx.Compiler.ProjectCompiler
+import org.verifx.Utilities.Scanner
 
 trait Prover {
   val files = Scanner.scan().toSet

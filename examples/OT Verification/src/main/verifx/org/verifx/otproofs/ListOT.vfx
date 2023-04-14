@@ -1,4 +1,4 @@
-import be.vub.otproofs.OT
+import org.verifx.otproofs.OT
 
 trait ListOT[V, Op] extends OT[LList[V], Op] {
   def isInsert(x: Op): Boolean

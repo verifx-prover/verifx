@@ -1,4 +1,4 @@
-import be.vub.verifx.Analysis.Proofs.Rejected
+import org.verifx.Analysis.Proofs.Rejected
 import org.scalatest.FlatSpec
 
 class SuleimanTest extends FlatSpec with Prover {

@@ -1,4 +1,4 @@
-import be.vub.otproofs.OT
+import org.verifx.otproofs.OT
 
 class Up(v: Int)
 

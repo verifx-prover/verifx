@@ -1,4 +1,4 @@
-import be.vub.otproofs.ListOT
+import org.verifx.otproofs.ListOT
 
 /*
  * Implementation of Suleiman's transformation functions.

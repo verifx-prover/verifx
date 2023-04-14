@@ -1,4 +1,4 @@
-import be.vub.otproofs.ListOT
+import org.verifx.otproofs.ListOT
 
 object Op {
   enum Op {
@@ -8,16 +8,7 @@ object Op {
   }
 }
 
-/*
- * Implementation and verification of the transformation functions proposed in:
- *   Matthias Ressel, Doris Nitsche-Ruhland, and Rul Gunzenhäuser. 1996.
- *   An integrating, transformation-oriented approach to concurrency control and undo in group editors.
- *   In Proceedings of the 1996 ACM conference on Computer supported cooperative work (CSCW '96).
- *   Association for Computing Machinery, New York, NY, USA, 288–297.
- *   DOI:https://doi.org/10.1145/240080.240305"
- */
-
-object Ressel extends ListOT[Int, Op] {
+object Ellis extends ListOT[Int, Op] {
   def isInsert(x: Op) = x match {
     case _: Insert => true
     case _ => false
@@ -39,29 +30,25 @@ object Ressel extends ListOT[Int, Op] {
   def Tii(op1: Op, op2: Op): Op = {
     val x = op1.asInstanceOf[Insert]
     val y = op2.asInstanceOf[Insert]
-    val p1 = x.p; val c1 = x.c; val u1 = x.prOrU
-    val p2 = y.p; val c2 = y.c; val u2 = y.prOrU
-    if (p1 < p2 || (p1 == p2 && u1 < u2))
-      x
-    else
-      new Insert(p1 + 1, c1, u1)
-  }
 
-  def Tdd(op1: Op, op2: Op): Op = {
-    val x = op1.asInstanceOf[Delete]
-    val y = op2.asInstanceOf[Delete]
-    if (x.p < y.p)
+    val p1 = x.p; val c1 = x.c; val pr1 = x.prOrU
+    val p2 = y.p; val c2 = y.c; val pr2 = y.prOrU
+    if (p1 < p2)
       x
-    else if (x.p > y.p)
-      new Delete(x.p - 1, x.prOrU)
-    else
+    else if (p1 > p2)
+      new Insert(p1 + 1, c1, pr1)
+    else if (c1 == c2)
       new Identity()
+    else if (pr1 > pr2)
+      new Insert(p1 + 1, c1, pr1)
+    else
+      x
   }
 
   def Tid(op1: Op, op2: Op): Op = {
     val x = op1.asInstanceOf[Insert]
     val y = op2.asInstanceOf[Delete]
-    if (x.p <= y.p)
+    if (x.p < y.p)
       x
     else
       new Insert(x.p - 1, x.c, x.prOrU)
@@ -74,6 +61,17 @@ object Ressel extends ListOT[Int, Op] {
       x
     else
       new Delete(x.p + 1, x.prOrU)
+  }
+
+  def Tdd(op1: Op, op2: Op): Op = {
+    val x = op1.asInstanceOf[Delete]
+    val y = op2.asInstanceOf[Delete]
+    if (x.p < y.p)
+      x
+    else if (x.p > y.p)
+      new Delete(x.p - 1, x.prOrU)
+    else
+      new Identity()
   }
 
   private def getPriority(op: Op) = op match {

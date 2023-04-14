@@ -1,4 +1,4 @@
-import be.vub.otproofs.OT
+import org.verifx.otproofs.OT
 
 class Lst[V](xs: Map[Int, V] = new Map[Int, V](), start: Int = 0, size: Int = 0) {
   def prepend(x: V) = {

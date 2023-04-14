@@ -1,4 +1,4 @@
-import be.vub.otproofs.ListOT
+import org.verifx.otproofs.ListOT
 
 object Op {
   enum Op {
