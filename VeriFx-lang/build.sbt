@@ -1,5 +1,5 @@
 name := "verifx"
-version := "1.0.0"
+version := "1.0.1"
 
 organization := "org.verifx"
 developers := List(Developer("Kevin", "De Porre", "kevin.de.porre@vub.be", url("https://github.com/kevin-dp")))
@@ -10,20 +10,24 @@ publishMavenStyle := true
 
 scalaVersion := "2.13.1"
 
-// disable publish with scala version,
-// otherwise artifact name will include scala version
-// e.g verifx_2.13.1
-crossPaths := false
+// To release a new version,
+// increment the VeriFx version on line 2,
+// and execute `publishSigned` in an SBT shell.
+// Then log in to https://s01.oss.sonatype.org/
+// you should see VeriFx under "staging repositories"
+// verify that it contains the necessary files,
+// then close it, and if it successfully closed, then release it.
+// Within ~30 minutes it should become available
+// and within ~2 hours it should be listed in search results in maven central.
 
-// add sonatype repository settings
-// snapshot versions publish to sonatype snapshot repository
-// other versions publish to sonatype staging repository
-publishTo := Some(
-  if (isSnapshot.value)
-    Opts.resolver.sonatypeSnapshots
-  else
-    Opts.resolver.sonatypeStaging
-)
+// Remove all additional repository other than Maven Central from POM
+pomIncludeRepository := { _ => false }
+publishTo := {
+  // For accounts created after Feb 2021:
+  val nexus = "https://s01.oss.sonatype.org/"
+  if (isSnapshot.value) Some("snapshots" at nexus + "content/repositories/snapshots")
+  else Some("releases" at nexus + "service/local/staging/deploy/maven2")
+}
 
 libraryDependencies ++= Seq(
   "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.0",
