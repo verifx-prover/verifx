@@ -7,11 +7,11 @@ The compiler takes care of translating your program to SMT and verifying the pro
 
 This repository contains several packages and is structured as follows:
 - [templates](templates) contains templates for starting your VeriFx projects 
-- [VeriFx-lang](VeriFx-lang) contains the implementation of the VeriFx language itself
 - [examples](examples) contains example programs written in VeriFx:
   - [CRDT Verification](examples/CRDT%20Verification) implements and verifies a variety of CRDTs
   - [OT Verification](examples/OT%20Verification) implements and verifies a variety of Operational Transformation functions
   - An overview of these examples and additional information about them can be found in our paper: [VeriFx: Correct Replicated Data Types for the Masses](https://arxiv.org/abs/2207.02502)
+- [VeriFx-lang](VeriFx-lang) contains the implementation of the VeriFx language itself
 - [docs](docs) contains the files for the GitHub pages website that document the VeriFx language
 - [documentation](documentation) contains the source files from which we generate the website
 
