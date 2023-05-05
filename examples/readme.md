@@ -8,7 +8,12 @@ Operational Transformation (OT) functions described in our [paper](https://arxiv
 
 The source code for the implementation of the different CRDTs can be found under `CRDT Verification/src/main/verifx/org/verifx/crdtproofs`.
 That directory contains several other directories for counter CRDTs, set CRDTs, etc.
-The table below contains all implemented CRDTs and specifies in which directory and in which file they are defined.
+The table below contains all implemented CRDTs and specifies the type of CRDT and the path to the file in which they are defined.
+The types are:
+- S: state-based CRDT
+- D: delta state-based CRDT
+- O: operation-based CRDT
+- P: pure operation-based CRDT
 
 | CRDT                                       | Type | File                                   |
 |--------------------------------------------|------|----------------------------------------|
@@ -72,12 +77,12 @@ The table below shows in which file each of the transformation functions is impl
 
 | Transformation Function | File                |
 |-------------------------|---------------------|
-| Ellis and Gibbs [24]    | Ellis.vfx           |
-| Ressel et al. [60]      | Ressel.vfx          |
-| Sun et al. [68]         | Sun.vfx             |
-| Suleiman et al. [65]    | Suleiman.vfx        |
-| Imine et al. [33]       | Imine.vfx           |
-| Register V1 [32]        | RegisterImine.vfx   |
-| Register V2 [32]        | RegisterImineV2.vfx |
-| Register V3 [32]        | RegisterImineV3.vfx |
-| Stack [32]              | StackImine.vfx      |
+| Ellis and Gibbs         | Ellis.vfx           |
+| Ressel et al.           | Ressel.vfx          |
+| Sun et al.              | Sun.vfx             |
+| Suleiman et al.         | Suleiman.vfx        |
+| Imine et al.            | Imine.vfx           |
+| Register V1             | RegisterImine.vfx   |
+| Register V2             | RegisterImineV2.vfx |
+| Register V3             | RegisterImineV3.vfx |
+| Stack                   | StackImine.vfx      |
