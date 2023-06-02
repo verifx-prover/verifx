@@ -17,7 +17,7 @@ This repository contains several packages and is structured as follows:
 
 ## Tutorial and API
 
-A brief tutorial about the VeriFx language as well as the complete API of VeriFx's collections can be found on our [Github page](http://kevin-dp.github.io/verifx).
+A brief tutorial about the VeriFx language as well as the complete API of VeriFx's collections can be found on our [Github page](http://verifx-prover.github.io/verifx).
 
 ## Installation
 
