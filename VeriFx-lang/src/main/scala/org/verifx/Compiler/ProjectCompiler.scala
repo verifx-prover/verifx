@@ -51,7 +51,7 @@ object ProjectCompiler {
   }
 
   def filePathToPkg(path: String) = path.stripPrefix(Path.of("src/main/verifx/").toString ++ s"${File.separatorChar}").stripSuffix(".vfx").replace(File.separatorChar, '.')
-  def pkgToFilePath(path: String) = Path.of("src/main/verifx/" ++ s"${File.separatorChar}").toString ++ path.replace('.', File.separatorChar) ++ ".vfx"
+  def pkgToFilePath(path: String) = Path.of("src/main/verifx/").toString ++ s"${File.separatorChar}" ++ path.replace('.', File.separatorChar) ++ ".vfx"
 
   private def makeSubgraphOfDAG[V](g: DirectedAcyclicGraph[V, DefaultEdge], vertexSet: Set[V]): DirectedAcyclicGraph[V, DefaultEdge] = {
     import scala.jdk.CollectionConverters._
