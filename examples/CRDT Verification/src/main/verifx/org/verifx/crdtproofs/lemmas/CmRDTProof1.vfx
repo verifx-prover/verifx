@@ -9,7 +9,6 @@ trait CmRDTProof1[Op[A], Msg[A], T[A] <: CmRDT[Op[A], Msg[A], T[A]]] {
 
       ( s1.reachable() && s2.reachable() && s3.reachable() &&
           s1.enabledSrc(x) && s2.enabledSrc(y) &&
-            //s1.enabledDown(msg1) && s2.enabledDown(msg2) &&
               s1.compatible(msg1, msg2) && s1.compatibleS(s2) && s1.compatibleS(s3) && s2.compatibleS(s3) ) =>: {
 
         // The effectors must commute
