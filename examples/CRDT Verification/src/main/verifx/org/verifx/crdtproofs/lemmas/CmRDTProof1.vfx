@@ -22,5 +22,3 @@ trait CmRDTProof1[Op[A], Msg[A], T[A] <: CmRDT[Op[A], Msg[A], T[A]]] {
     }
   }
 }
-
-// TODO: check that compatible commutes
