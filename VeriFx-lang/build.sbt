@@ -1,5 +1,5 @@
 name := "verifx"
-version := "1.0.1"
+version := "1.0.2"
 
 organization := "org.verifx"
 developers := List(Developer("Kevin", "De Porre", "kevin.de.porre@vub.be", url("https://github.com/kevin-dp")))
