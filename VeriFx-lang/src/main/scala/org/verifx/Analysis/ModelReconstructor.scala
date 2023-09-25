@@ -9,7 +9,7 @@ import scala.meta.{Term, Type}
  * Represents a proof variable, i.e. a variable occuring in a top-level `forall` or `exists` statement of a proof
  */
 case class Variable(name: String, value: Any, tpe: scala.meta.Type) {
-  override def toString: String = s"$name: $tpe = $value"
+  override def toString: String = s"val $name: $tpe = $value"
 }
 
 /**
