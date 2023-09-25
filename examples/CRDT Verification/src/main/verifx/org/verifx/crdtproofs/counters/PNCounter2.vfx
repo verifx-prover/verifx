@@ -2,17 +2,9 @@ import org.verifx.crdtproofs.lemmas.CvRDT
 import org.verifx.crdtproofs.lemmas.CvRDTProof
 
 class PNCounter2(p: Vector[Int], n: Vector[Int]) extends CvRDT[PNCounter2] {
-  pre increment(replica: Int) {
-    replica >= 0 && replica < this.p.size
-  }
-
   def increment(replica: Int) = {
     val count = this.p.get(replica)
     new PNCounter2(this.p.write(replica, count + 1), this.n)
-  }
-
-  pre decrement(replica: Int) {
-    replica >= 0 && replica < this.n.size
   }
 
   def decrement(replica: Int) = {
