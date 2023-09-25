@@ -1,6 +1,5 @@
 package org.verifx.crdtproofs
 
-import org.verifx.crdtproofs.Prover
 import org.scalatest.FlatSpec
 
 class ProofTests extends FlatSpec with Prover {
@@ -321,6 +320,15 @@ class ProofTests extends FlatSpec with Prover {
   "GMap" should "be a CvRDT" in {
     val gmap = ("GMap", "is_a_CvRDT")
     prove(gmap)
+  }
+
+  ///////////////////////////////////////////
+  // State-based Add-Wins Nested Map CRDT //
+  /////////////////////////////////////////
+
+  "NestedMap" should "be a CvRDT" in {
+    val map = ("NestedMap", "is_a_CvRDT")
+    prove(map)
   }
 
   //////////////////////////////////////////////////////

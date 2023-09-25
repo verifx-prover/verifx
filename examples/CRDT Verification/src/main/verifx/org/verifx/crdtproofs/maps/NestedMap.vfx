@@ -1,0 +1,56 @@
+import org.verifx.crdtproofs.lemmas.CvRDT
+import org.verifx.crdtproofs.lemmas.CvRDTProof2
+
+/*
+ * Map CRDT where the values are also CRDTs.
+ * Maps are merged by taking the union of their keys
+ * and merging values for keys that are in both maps.
+ * This map provides add-wins semantics.
+ *
+ * The map expects a join function that can merge the CRDT values.
+ * This is needed because the type parameters of classes can't have type bounds.
+ * So we cannot express it as `class NestedMap[K, V extends CvRDT[V]]`.
+ * The join function should be commutative, associative, and idempotent.
+ */
+class NestedMap[K, V](join: (V, V) => V, entries: Map[K, V] = new Map[K, V]()) extends CvRDT[NestedMap[K, V]] {
+  override def compatible(that: NestedMap[K, V]) = {
+    // every replica must use the same join function
+    this.join == that.join
+  }
+
+  override def reachable() = {
+    // The join function must be commutative, associative, and idempotent.
+    forall(v1: V, v2: V, v3: V) {
+      this.join(v1, v2) == this.join(v2, v1) && // commutative
+      this.join(this.join(v1, v2), v3) == this.join(v1, this.join(v2, v3)) && // associative
+      this.join(v1, v1) == v1 // idempotent
+    }
+  }
+
+  def add(key: K, value: V) = {
+    new NestedMap(this.join, this.entries.add(key, value))
+  }
+
+  def remove(key: K) = {
+    new NestedMap(this.join, this.entries.remove(key))
+  }
+
+  def merge(that: NestedMap[K, V]) = {
+    new NestedMap(
+      this.join,
+      this.entries.combine(
+        that.entries,
+        (v1: V, v2: V) => this.join(v1, v2)
+      )
+    )
+  }
+
+  def compare(that: NestedMap[K, V]) = false // not used because we override `equals`
+  override def equals(that: NestedMap[K, V]) = {
+    this.entries == that.entries
+  }
+}
+
+object NestedMap extends CvRDTProof2[NestedMap]
+
+
