@@ -40,26 +40,6 @@ trait CvRDTProof[T <: CvRDT[T]] {
     }
   }
 
-  /*
-
-   ; x = MVReg(0,
-   ;           { (8, 1236, -2282),
-   ;             (20, 2997, -4144),
-   ;             (13, 609, -8098),
-   ;             (7, 7719, -2283) },
-   ;           a!2)
-
-   ; y = MVReg(1,
-   ;           { (19, 974, 1888),
-   ;             (10, 8945, 6283) },
-   ;           a!1)
-
-   ; z = MVReg(2,
-   ;           { (12, 449, -8099) },
-   ;           a!1)
-
-   */
-
   proof mergeCommutative {
     forall (x: T, y: T) {
       (x.reachable() && y.reachable() && x.compatible(y)) =>: {
@@ -84,27 +64,6 @@ trait CvRDTProof[T <: CvRDT[T]] {
       }
     }
   }
-
-  /*
-    //
-     ; x = 8364
-     ; y = 6569
-     ; z = 8365
-
-     x.merge(y).merge(z).equals(x.merge(y.merge(z)))
-     x.merge(z).equals(x.merge(y.merge(z)))
-     z.equals(x.merge(y.merge(z)))
-     z.equals(x.merge(z))
-     z.equals(z)
-  */
-
-  /*
-  proof compatibleCommutes {
-    forall (x: T, y: T) {
-      ( x.reachable() && y.reachable() ) =>: ( x.compatible(y) == y.compatible(x) )
-    }
-  }
-  */
 
   proof compareCorrect {
     forall (x: T, y: T) {
