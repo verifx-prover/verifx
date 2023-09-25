@@ -220,4 +220,9 @@ case class ProgramCompiler(file: List[Stat], clazzes: Classes = Classes(), proof
     val (compilerState, compiledProgram) = compileToZ3
     Proofs.checkProofs(newProofs, compiledProgram, newClasses, compilerState, maxTries, timeout)
   }
+
+  def checkProofsForModel(maxTries: Int = 5, timeout: Int = 10000): Map[ProofName, ProofResult] = {
+    val (compilerState, compiledProgram) = compileToZ3
+    Proofs.checkProofsForModel(newProofs, compiledProgram, newClasses, compilerState, maxTries, timeout)
+  }
 }

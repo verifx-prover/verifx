@@ -191,4 +191,13 @@ object Proofs {
       }
     }
   }
+
+  def checkProofsForModel(proofs: Set[Proof], z3Program: String, classTable: Classes, z3CompilerState: Z3CompilerPlugin.CompilerState, maxTries: Int = 5, timeout: Int = 10000): Map[ProofName, ProofResult] = {
+    proofs.foldLeft(Map.empty[ProofName, ProofResult]) {
+      case (results, proof@Proof(name, objName, _, _)) => {
+        val proofResult = checkProofForModel(proof, z3Program, classTable, z3CompilerState, maxTries, timeout)
+        results + ((objName, name) -> proofResult)
+      }
+    }
+  }
 }
