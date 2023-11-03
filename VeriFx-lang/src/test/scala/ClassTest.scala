@@ -181,6 +181,90 @@ class ClassTest extends FlatSpec {
     }
   }
 
+  it should "infer type parameters from arguments" in {
+    val obj =
+      """class F {}
+         class Test {
+           def foo[A](a: A): A = a
+           def bar() = this.foo(new F())
+         }""".stripMargin
+
+    val scalaCode = ProgramCompiler(obj).compileToLanguage(new ScalaCompilerPlugin)._2
+    val z3Code = ProgramCompiler(obj).compileToLanguage(new Z3CompilerPlugin)._2
+
+    assert(scalaCode != "")
+    assert(z3Code != "")
+  }
+
+  it should "throw error if it can't infer type parameters from arguments" in {
+    val obj =
+      """trait Test {
+           def foo[A](): A
+           def bar() = this.foo()
+         }""".stripMargin
+
+    assertThrows[TypeError] {
+      ProgramCompiler(obj).compileToLanguage(new Z3CompilerPlugin)._2
+    }
+  }
+
+  it should "allow argument to be a subtype of the provided type argument" in {
+    val obj =
+      """trait A {}
+         class B extends A
+         class Test {
+           def foo[X](x: X): X = x
+           def bar() = this.foo[A](new B())
+         }""".stripMargin
+
+    val scalaCode = ProgramCompiler(obj).compileToLanguage(new ScalaCompilerPlugin)._2
+    val z3Code = ProgramCompiler(obj).compileToLanguage(new Z3CompilerPlugin)._2
+
+    assert(scalaCode != "")
+    assert(z3Code != "")
+  }
+
+  it should "throw a type error if type argument is a subtype of the actual argument" in {
+    val obj =
+      """trait A {}
+         class B extends A {}
+         trait Test {
+           def foo[X](x: X): X = x
+           def bar(a: A) = this.foo[B](a)
+         }""".stripMargin
+
+    assertThrows[TypeError] {
+      ProgramCompiler(obj).compileToLanguage(new Z3CompilerPlugin)._2
+    }
+  }
+
+  it should "throw a type error if type argument does not match argument" in {
+    val obj =
+      """trait A {}
+         class B extends A {}
+         class C extends A {}
+         class Test {
+           def foo[X](x: X): X = x
+           def bar() = this.foo[B](new C())
+         }""".stripMargin
+
+    assertThrows[TypeError] {
+      ProgramCompiler(obj).compileToLanguage(new Z3CompilerPlugin)._2
+    }
+  }
+
+  it should "throw a type error if only part of the type arguments are provided" in {
+    val obj =
+      """class Test {
+           def foo[X, Y](x: X, y: Y): X = x
+           def bar() = this.foo[Int](5, 6)
+         }""".stripMargin
+
+    assertThrows[TypeError] {
+      ProgramCompiler(obj).compileToLanguage(new Z3CompilerPlugin)._2
+    }
+  }
+
   "Classes" should "throw an error if a predicate is associated to an inexistant method" in {
     val invalidPred =
       """class Test {

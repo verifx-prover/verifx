@@ -368,7 +368,7 @@ case class MethodBody(var env: Map[String, Type])(implicit val thisClass: Type, 
   private def makeMethodCall(obj: Term, method: Method, maybeTypeArgs: Option[List[Type]], args: List[Term], objTpe: Type, clazz: ClassOrTrait, exp: Term) = {
     val tparams = method.tparams
     // If no type arguments are provided, then infer the method's type parameters from the provided arguments
-    val inferredTypeArgs = Types.inferTypeParams(method, args, env, exp)
+    val inferredTypeArgs = Types.inferTypeParams(method, args, env, exp, maybeTypeArgs.getOrElse(Nil))
     val typeArgs = if (maybeTypeArgs.nonEmpty) maybeTypeArgs.get else inferredTypeArgs
     // Check that the provided type args match the inferred type args
     if (maybeTypeArgs.nonEmpty && !Types.matchSubtypes(typeArgs, inferredTypeArgs))

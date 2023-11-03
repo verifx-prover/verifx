@@ -4,6 +4,7 @@ import scala.meta.Term.Eta
 import scala.meta._
 import scala.meta.contrib._
 import cats.implicits._
+import org.verifx.Compiler.Types.TypeWithSubtypeCheck
 import org.verifx.{ClassNotFound, Compiler, FieldDoesNotExist, MatchError, MethodNotFound, ParseError, TypeError, UnknownIdentifierError}
 
 import java.lang.Enum
@@ -484,19 +485,22 @@ object Types {
    * @param method The method for which to infer the type of the type parameters
    * @param args Arguments passed to the method
    */
-  def inferTypeParams(method: Method, args: List[Term], env: Map[String, Type], exp: Term)(implicit classTable: Classes): List[Type] = {
+  def inferTypeParams(method: Method, args: List[Term], env: Map[String, Type], exp: Term, typeArgs: List[Type])(implicit classTable: Classes): List[Type] = {
     val typeParams = method.tparams
     val declTypes = method.argList.map(_.decltpe.get)
 
-    inferTypeParams(typeParams, declTypes, args, env, exp)
+    inferTypeParams(typeParams, declTypes, args, env, exp, typeArgs)
   }
 
   /**
    * Infer the type of `typeParams` based on the declared types `declTypes` and the provided arguments `args`.
    * The declared types `declTypes` are the declared types of the arguments `args`.
    * By inferring the actual type of `args` and matching it to `declTypes` we can infer the type of the type parameters `typeParams`.
+   * Sometimes, we may not be able to infer (all) type parameters from the arguments, e.g. if no arguments are provided.
+   * In that case, the programmer must explicitly provide type arguments `tArgs`,
+   * so the inferred type parameters become the provided type arguments.
    */
-  def inferTypeParams(typeParams: List[Type.Param], declTypes: List[Type], args: List[Term], env: Map[String, Type], exp: Term)(implicit classTable: Classes): List[Type] = {
+  def inferTypeParams(typeParams: List[Type.Param], declTypes: List[Type], args: List[Term], env: Map[String, Type], exp: Term, typeArgs: List[Type] = Nil)(implicit classTable: Classes): List[Type] = {
     // Check the argument's declTpe and properTpe against each other
     // - keep a map of typeParamName -> Set[properTpe]
     // - if declTpe is Type.Name:
@@ -521,13 +525,25 @@ object Types {
     }
 
     // Check if we were able to infer all type parameters based on the arguments
-    paramNames.find(!inferredTypeParams.contains(_)) match {
-      case Some(paramName) => throw ParseError(s"Could not infer type of type parameter $paramName", exp.pos)
-      case None => ()
+    val tparams = paramNames.find(!inferredTypeParams.contains(_)) match {
+      case Some(paramName) => {
+        // use the user-provided typeArgs
+        if (typeArgs.length == 0) {
+          throw TypeError(s"Could not infer type parameters from arguments. Please provided type arguments explicitly.", exp.pos)
+        }
+        else {
+          paramNames.zip(typeArgs).toMap
+        }
+      }
+      case None => inferredTypeParams
+    }
+
+    if (typeArgs.length > 0 && typeArgs.length != typeParams.length) {
+      throw TypeError(s"Expected ${typeParams.length} type parameters but got ${typeArgs.length}", exp.pos)
     }
 
     // Transform this call `new tpe(..args)` into `new tpe[inferredTypes](..args)`
-    val paramTypes = paramNames.map(inferredTypeParams.get(_).get)
+    val paramTypes = paramNames.map(tparams.get(_).get)
     paramTypes
   }
 
@@ -822,14 +838,14 @@ object Types {
     case None => throw ParseError(s"Missing type declaration for parameter: $param", param.pos)
   }
 
-  private def getMethodCallOrFunctionCallType(methodName: Term.Name, classType: Type, args: List[Term], env: Map[String, Type], exp: Term)(implicit classTable: Classes) = {
+  private def getMethodCallOrFunctionCallType(methodName: Term.Name, classType: Type, args: List[Term], env: Map[String, Type], exp: Term, tArgs: List[Type] = Nil)(implicit classTable: Classes) = {
     // `method` can be a method of the `classType` class
     // or it can be a field that is a function
     val clazz = getClass(classType, classTable, env)
     clazz.getMethod(methodName.value) match {
       case Some(method) => {
         // Infer the method's type arguments
-        val typeArgs = Types.inferTypeParams(method, args, env, exp)
+        val typeArgs = Types.inferTypeParams(method, args, env, exp, tArgs)
         // Fill the type arguments in the method
         val filledMethod = method.fillTypeParameters(method.name, Types.tparamsToTypes(method.tparams), typeArgs)
         // Fetch the method's return type
@@ -937,12 +953,12 @@ object Types {
       val objTpe = inferType(obj, env)
       getMethodCallOrFunctionCallType(method, objTpe, args, env, exp)
     }
-    case Term.Apply(Term.ApplyType(Term.Select(obj, method), _), args) => {
+    case Term.Apply(Term.ApplyType(Term.Select(obj, method), typeArgs), args) => {
       // Matches method calls with explicit type arguments
       // e.g. `obj.method[String](...)`
       // correctness of type arguments is checked by the compiler
       val objTpe = inferType(obj, env)
-      getMethodCallOrFunctionCallType(method, objTpe, args, env, exp)
+      getMethodCallOrFunctionCallType(method, objTpe, args, env, exp, typeArgs)
     }
     case Term.Select(qual, field) => {
       // infer type of `qual` then lookup type of `field` in that class
