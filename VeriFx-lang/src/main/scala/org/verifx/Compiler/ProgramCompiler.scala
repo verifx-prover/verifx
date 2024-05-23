@@ -146,7 +146,7 @@ case class ProgramCompiler(file: List[Stat], clazzes: Classes = Classes(), proof
     builtInClasses.contains(className)
   }
 
-  private def compilationState[C, M <: C, S](plugin: Plugin[C, M, S]): State[S, List[C]] = {
+  private def compilationState[C, M <: C, S](plugin: Plugin[C, M, S], transformer: IR.IR => IR.IR): State[S, List[C]] = {
     import scala.reflect.runtime.currentMirror
     import scala.tools.reflect.ToolBox
 
@@ -174,7 +174,8 @@ case class ProgramCompiler(file: List[Stat], clazzes: Classes = Classes(), proof
     val compileBody = irProgram traverse {
       irStat => {
         val ir = toolbox.eval(toolbox.parse(irStat)).asInstanceOf[IR]
-        compiler.compile(ir)
+        val transformedIr = transformer(ir)
+        compiler.compile(transformedIr)
       }
     }
 
@@ -187,19 +188,19 @@ case class ProgramCompiler(file: List[Stat], clazzes: Classes = Classes(), proof
     } yield (start :: body) ++ List(end)
   }
 
-  def compileToLanguage[C, M <: C, S](plugin: Plugin[C, M, S], initialState: Option[S] = None): (S, String) = {
-    val compilation = compilationState(plugin)
+  def compileToLanguage[C, M <: C, S](plugin: Plugin[C, M, S], transformer: IR.IR => IR.IR = identity[IR.IR], initialState: Option[S] = None): (S, String) = {
+    val compilation = compilationState(plugin, transformer)
     plugin.run(compilation, initialState)
   }
 
-  def compileToZ3() = {
+  def compileToZ3(transformer: IR.IR => IR.IR = identity[IR.IR]) = {
     val plugin = new Z3CompilerPlugin
-    val compilation = compilationState(plugin)
+    val compilation = compilationState(plugin, transformer)
     plugin.run(compilation, None)
   }
 
   private def getProof(proofName: ProofName): (Types.Proof, Z3CompilerPlugin.CompilerState, String) = {
-    val (compilerState, compiledProgram) = compileToZ3
+    val (compilerState, compiledProgram) = compileToZ3()
     newProofIndex.get(proofName) match {
       case Some(proof) => (proof, compilerState, compiledProgram)
       case None => throw new Error(s"Proof $proofName not found.")
@@ -217,12 +218,12 @@ case class ProgramCompiler(file: List[Stat], clazzes: Classes = Classes(), proof
   }
 
   def checkProofs(maxTries: Int = 5, timeout: Int = 10000): Map[ProofName, ProofResult] = {
-    val (compilerState, compiledProgram) = compileToZ3
+    val (compilerState, compiledProgram) = compileToZ3()
     Proofs.checkProofs(newProofs, compiledProgram, newClasses, compilerState, maxTries, timeout)
   }
 
   def checkProofsForModel(maxTries: Int = 5, timeout: Int = 10000): Map[ProofName, ProofResult] = {
-    val (compilerState, compiledProgram) = compileToZ3
+    val (compilerState, compiledProgram) = compileToZ3()
     Proofs.checkProofsForModel(newProofs, compiledProgram, newClasses, compilerState, maxTries, timeout)
   }
 }

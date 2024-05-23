@@ -189,7 +189,7 @@ case class ProjectCompiler(components: List[List[(FileName, List[Stat])]], depen
   }.flatten.toMap
   */
 
-  def compileToLanguage[C, M <: C, S](plugin: Plugin[C, M, S]): List[(FileName, String)] = {
+  def compileToLanguage[C, M <: C, S](plugin: Plugin[C, M, S], transformer: IR.IR => IR.IR = identity[IR.IR]): List[(FileName, String)] = {
     import scala.collection.parallel.CollectionConverters._
 
     // Compile independent components in parallel
@@ -200,7 +200,7 @@ case class ProjectCompiler(components: List[List[(FileName, List[Stat])]], depen
         filesInOrder.foldLeft((Option.empty[S], Classes(), Set.empty[Proof], Map.empty[ProofName, Proof], List.empty[(FileName, String)])) {
           case ((state, classes, proofs, proofIndex, compiledFiles), (fileName, stats)) => {
             val fileCompiler = new ProgramCompiler(stats, classes, proofs, proofIndex, Some(fileName))
-            val (newState, compiledFile) = fileCompiler.compileToLanguage(plugin, state)
+            val (newState, compiledFile) = fileCompiler.compileToLanguage(plugin, transformer, state)
             val newFiles = (fileName, compiledFile) :: compiledFiles
             (Some(newState), fileCompiler.newClasses, fileCompiler.newProofs, fileCompiler.newProofIndex, newFiles)
           }
