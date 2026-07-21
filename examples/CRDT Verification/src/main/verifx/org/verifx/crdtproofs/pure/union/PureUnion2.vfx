@@ -1,0 +1,442 @@
+import org.verifx.crdtproofs.VersionVector
+import org.verifx.crdtproofs.pure.ResettableCRDT
+
+/*
+ * A Union-2 is a composite pure op-based CRDT that generalizes
+ * the MVRegister from multiple concurrent values of the same type
+ * to multiple concurrent values of different types.
+ *
+ * A conflict arises when two concurrent updates set the value of the Union-2 to different types.
+ * The Union-2 resolves this conflict by returning both values in a set, such that
+ * the users can resolve the conflict by choosing one the types later.
+ *
+ * In a sense, a Union CRDT is replicated sum type delegating the conflict resolution to the user.
+ */
+
+//! VeriFx does not support variadic generics, so we define a Union-2 CRDT with two alternative types.
+//! It is easy to see that the proofs here generalize to a Union-N.
+
+object Union2Ops {
+  // The operations of a Union-2 CRDT are either an update to one of the two alternatives,
+  // or a choice of one of the two alternatives.
+  enum Union2Op[Alt1Op, Alt2Op] {
+    UpdateAlt1(op: Alt1Op) |
+    UpdateAlt2(op: Alt2Op) |
+    ChooseAlt1() |
+    ChooseAlt2()
+  }
+}
+
+// An alternative of a Union-2
+class Field[Log, Op, Value](
+  child: ResettableChild[Log, Op, Value],
+  log: Log
+) {
+  def isVisible(): Boolean =
+    !this.child.isDefaultLog(this.log)
+}
+
+// Returned value of a Union-2 CRDT read operation.
+object Alt2Values {
+  enum Alt2Value[Field1Value, Field2Value] {
+    Alt1(value: Field1Value) |
+    Alt2(value: Field2Value)
+  }
+}
+
+// Returned value of a Union-2 CRDT read operation.
+// The value is either the value of the first field or the value of the second field, or both values if there is a conflict.
+class Union2Value[Field1Value, Field2Value](
+  values: Set[Alt2Value[Field1Value, Field2Value]]
+)
+
+class Union2Log[
+  Field1Log, Field1Op, Field1Value,
+  Field2Log, Field2Op, Field2Value
+](
+  field1: Field[Field1Log, Field1Op, Field1Value],
+  field2: Field[Field2Log, Field2Op, Field2Value]
+) extends ResettableCRDT[
+  Union2Op[Field1Op, Field2Op],
+  Union2Value[Field1Value, Field2Value],
+  Union2Log[Field1Log, Field1Op, Field1Value, Field2Log, Field2Op, Field2Value]
+] {
+  def copy(
+    newField1: Field[Field1Log, Field1Op, Field1Value],
+    newField2: Field[Field2Log, Field2Op, Field2Value]
+  ): Union2Log[Field1Log, Field1Op, Field1Value, Field2Log, Field2Op, Field2Value] =
+    new Union2Log[Field1Log, Field1Op, Field1Value, Field2Log, Field2Op, Field2Value](
+      newField1,
+      newField2
+    )
+
+  // An operation to a child CRDT is routed to its corresponding field.
+  // Operations on different set child CRDTs commute because they modify disjoint logs.
+  // A choose operation on a type T resets the child CRDTs of different types to their default state
+  def effect(op: Union2Op[Field1Op, Field2Op], t: VersionVector): Union2Log[Field1Log, Field1Op, Field1Value, Field2Log, Field2Op, Field2Value] = op match {
+    case UpdateAlt1(u) =>
+      this.copy(
+        new Field[Field1Log, Field1Op, Field1Value](
+          this.field1.child,
+          this.field1.child.effect(this.field1.log, u, t)
+        ),
+        this.field2
+      )
+
+    case UpdateAlt2(u) =>
+      this.copy(
+        this.field1,
+        new Field[Field2Log, Field2Op, Field2Value](
+          this.field2.child,
+          this.field2.child.effect(this.field2.log, u, t)
+        )
+      )
+
+    case ChooseAlt1() =>
+      this.copy(
+        this.field1,
+        new Field[Field2Log, Field2Op, Field2Value](
+          this.field2.child,
+          this.field2.child.reset(this.field2.log, t, true)
+        )
+      )
+
+    case ChooseAlt2() =>
+      this.copy(
+        new Field[Field1Log, Field1Op, Field1Value](
+          this.field1.child,
+          this.field1.child.reset(this.field1.log, t, true)
+        ),
+        this.field2
+      )
+  }
+
+  // Reset the Union-2 CRDT to a given version vector. The reset propagates to the child CRDTs of each field.
+  def reset(t: VersionVector, conservative: Boolean): Union2Log[Field1Log, Field1Op, Field1Value, Field2Log, Field2Op, Field2Value] = {
+    this.copy(
+      new Field[Field1Log, Field1Op, Field1Value](
+        this.field1.child,
+        this.field1.child.reset(this.field1.log, t, conservative)
+      ),
+      new Field[Field2Log, Field2Op, Field2Value](
+        this.field2.child,
+        this.field2.child.reset(this.field2.log, t, conservative)
+      )
+    )
+  }
+
+  // A read contains both alternative types exactly when both child logs are visible.
+  def hasTypeConflict(): Boolean =
+    this.field1.isVisible() && this.field2.isVisible()
+
+  // A read contains one alternative type exactly when only one child log is visible.
+  def hasSingleType(): Boolean =
+    (this.field1.isVisible() && !this.field2.isVisible()) ||
+    (!this.field1.isVisible() && this.field2.isVisible())
+
+  // Recursively read the value.
+  // The read return a set of value, one for each type that has been set.
+  // If there is a conflict, the set will contain multiple values,
+  // otherwise it will contain a single value.
+  def read(): Union2Value[Field1Value, Field2Value] = {
+    val emptyValues = new Set[Alt2Value[Field1Value, Field2Value]]()
+    val field1Values =
+      if (!this.field1.isVisible()) {
+        emptyValues
+      } else {
+        emptyValues.add(
+          new Alt1[Field1Value, Field2Value](
+            this.field1.child.applyRead(this.field1.log)
+          )
+        )
+      }
+    val values =
+      if (!this.field2.isVisible()) {
+        field1Values
+      } else {
+        field1Values.add(
+          new Alt2[Field1Value, Field2Value](
+            this.field2.child.applyRead(this.field2.log)
+          )
+        )
+      }
+
+    new Union2Value[Field1Value, Field2Value](values)
+  }
+
+  // An update operation on a child CRDT is enabled if:
+  // 1. the child CRDT is set (i.e., its log is not the default log), and the operation is enabled on the child CRDT.
+  // 2. or the Union CRDT is in a default state (a type has not been set yet)
+  // A choose operation is enabled if:
+  // 1. several child CRDTs are set (i.e., there is a conflict to solve)
+  // 2. the chosen child CRDT is set (i.e., its log is not the default log)
+  /*
+  * NOTE: precondition checking is done at source, never downstream.
+  */
+  def isEnabled(op: Union2Op[Field1Op, Field2Op]): Boolean = op match {
+    case UpdateAlt1(u) =>
+      (this.field1.isVisible() &&
+        this.field1.child.isEnabled(this.field1.log, u)) ||
+      (!this.field1.isVisible() &&
+        !this.field2.isVisible())
+
+    case UpdateAlt2(u) =>
+      (this.field2.isVisible() &&
+        this.field2.child.isEnabled(this.field2.log, u)) ||
+      (!this.field1.isVisible() &&
+        !this.field2.isVisible())
+
+    case ChooseAlt1() =>
+      this.field1.isVisible() &&
+        this.field2.isVisible()
+
+    case ChooseAlt2() =>
+      this.field1.isVisible() &&
+        this.field2.isVisible()
+  }
+}
+
+object PureUnion2 {
+  /*
+   * Concurrent Union2 updates commute. Updates to the same field commute
+   * because that field's child CRDT supplies the effect commutation law.
+   * Updates to different fields commute because they modify disjoint logs.
+   * Choose commute with Update because they reset the other field's log to its default state (they are update/reset).
+   */
+  proof Record2_converges[
+    Field1Log, Field1Op, Field1Value,
+    Field2Log, Field2Op, Field2Value
+  ] {
+    forall(
+      union: Union2Log[Field1Log, Field1Op, Field1Value, Field2Log, Field2Op, Field2Value],
+      op1: Union2Op[Field1Op, Field2Op],
+      op2: Union2Op[Field1Op, Field2Op],
+      t1: VersionVector,
+      t2: VersionVector
+    ) {
+      (t1.concurrent(t2) &&
+        // Versions are well-formed
+        t1.vector.forall((n: Int) => n >= 0) &&
+        t2.vector.forall((n: Int) => n >= 0) &&
+        t1.vector.size == t2.vector.size &&
+        // The child CRDTs are correct
+        (
+          op1 match {
+            case UpdateAlt1(u1) => op2 match {
+              case UpdateAlt1(u2) =>
+                union.field1.child.effectsCommute(union.field1.log, u1, t1, u2, t2)
+
+              case UpdateAlt2(_) =>
+                true
+
+              case ChooseAlt1() =>
+                true
+
+              case ChooseAlt2() =>
+                union.field1.child.effectResetCommutes(union.field1.log, u1, t1, t2, true)
+            }
+
+            case UpdateAlt2(u1) => op2 match {
+              case UpdateAlt1(_) =>
+                true
+
+              case UpdateAlt2(u2) =>
+                union.field2.child.effectsCommute(union.field2.log, u1, t1, u2, t2)
+
+              case ChooseAlt1() =>
+                union.field2.child.effectResetCommutes(union.field2.log, u1, t1, t2, true)
+
+              case ChooseAlt2() =>
+                true
+            }
+
+            case ChooseAlt1() => op2 match {
+              case UpdateAlt1(_) =>
+                true
+
+              case UpdateAlt2(u2) =>
+                union.field2.child.effectResetCommutes(union.field2.log, u2, t2, t1, true)
+
+              case ChooseAlt1() =>
+                union.field2.child.resetsCommute(union.field2.log, t1, t2, true, true)
+
+              case ChooseAlt2() =>
+                true
+            }
+
+            case ChooseAlt2() => op2 match {
+              case UpdateAlt1(u2) =>
+                union.field1.child.effectResetCommutes(union.field1.log, u2, t2, t1, true)
+
+              case UpdateAlt2(_) =>
+                true
+
+              case ChooseAlt1() =>
+                true
+
+              case ChooseAlt2() =>
+                union.field1.child.resetsCommute(union.field1.log, t1, t2, true, true)
+            }
+          }
+        )
+      ) =>: {
+        val left = union.effect(op2, t2).effect(op1, t1)
+        val right = union.effect(op1, t1).effect(op2, t2)
+        left == right && left.read() == right.read()
+      }
+    }
+  }
+
+  /*
+  * The Union-2 is a correct resettable CRDT.
+  */
+
+  proof update_reset[
+    Field1Log, Field1Op, Field1Value,
+    Field2Log, Field2Op, Field2Value
+  ] {
+    forall(
+      union: Union2Log[Field1Log, Field1Op, Field1Value, Field2Log, Field2Op, Field2Value],
+      op: Union2Op[Field1Op, Field2Op],
+      effectTime: VersionVector,
+      resetTime: VersionVector,
+      conservative: Boolean
+    ) {
+      (
+        effectTime.concurrent(resetTime) &&
+        // Version vectors are well-formed
+        effectTime.vector.forall((n: Int) => n >= 0) &&
+        resetTime.vector.forall((n: Int) => n >= 0) &&
+        effectTime.vector.size == resetTime.vector.size &&
+        // The child is a resettable CRDT
+        (
+          op match {
+            case UpdateAlt1(u) =>
+              union.field1.child.effectResetCommutes(union.field1.log, u, effectTime, resetTime, conservative)
+
+            case UpdateAlt2(u) =>
+              union.field2.child.effectResetCommutes(union.field2.log, u, effectTime, resetTime, conservative)
+
+            case ChooseAlt1() =>
+              union.field2.child.resetsCommute(union.field2.log, effectTime, resetTime, true, conservative)
+
+            case ChooseAlt2() =>
+              union.field1.child.resetsCommute(union.field1.log, effectTime, resetTime, true, conservative)
+          }
+        )
+      ) =>: {
+        union.effect(op, effectTime).reset(resetTime, conservative) == union.reset(resetTime, conservative).effect(op, effectTime)
+      }
+    }
+  }
+
+  proof reset_reset[
+    Field1Log, Field1Op, Field1Value,
+    Field2Log, Field2Op, Field2Value
+  ] {
+    forall(
+      union: Union2Log[Field1Log, Field1Op, Field1Value, Field2Log, Field2Op, Field2Value],
+      resetTime1: VersionVector,
+      resetTime2: VersionVector,
+      conservative1: Boolean,
+      conservative2: Boolean
+    ) {
+      (
+        resetTime1.concurrent(resetTime2) &&
+        // Version vectors are well-formed
+        resetTime1.vector.forall((n: Int) => n >= 0) &&
+        resetTime2.vector.forall((n: Int) => n >= 0) &&
+        resetTime1.vector.size == resetTime2.vector.size &&
+        // The child is a resettable CRDT
+        union.field1.child.resetsCommute(union.field1.log, resetTime1, resetTime2, conservative1, conservative2) &&
+        union.field2.child.resetsCommute(union.field2.log, resetTime1, resetTime2, conservative1, conservative2)
+      ) =>: {
+        union.reset(resetTime1, conservative1).reset(resetTime2, conservative2) ==
+        union.reset(resetTime2, conservative2).reset(resetTime1, conservative1)
+      }
+    }
+  }
+
+  /*
+   * Proving the Union-2 semantics.
+   */
+
+  /*
+   * Once the Union has one visible type, any locally enabled operation cannot
+   * introduce the other type. Updates are restricted to the visible field by
+   * isEnabled, while choices require both fields and are therefore impossible
+   * in a single-type state. A concurrent downstream operation is not rechecked
+   * and may still create a conflict.
+   */
+  proof local_enabled_operation_cannot_create_type_conflict[
+    Field1Log, Field1Op, Field1Value,
+    Field2Log, Field2Op, Field2Value
+  ] {
+    forall(
+      union: Union2Log[Field1Log, Field1Op, Field1Value, Field2Log, Field2Op, Field2Value],
+      op: Union2Op[Field1Op, Field2Op],
+      t: VersionVector
+    ) {
+      (
+        union.hasSingleType() &&
+        union.isEnabled(op)
+      ) =>: {
+        !union.effect(op, t).hasTypeConflict()
+      }
+    }
+  }
+
+  /*
+   * Any enabled choice from a conflict keeps the selected field visible and
+   * resets the concurrent childs. The reset is conservative, so the conflict is
+   * resolved only if no further concurrent updates are received to the other
+   * child CRDTs are delivered after.
+   * In this case, the read returns a single value of the chosen type.
+   */
+  proof choose_reads_single_value[
+    Field1Log, Field1Op, Field1Value,
+    Field2Log, Field2Op, Field2Value
+  ] {
+    forall(
+      union: Union2Log[Field1Log, Field1Op, Field1Value, Field2Log, Field2Op, Field2Value],
+      op: Union2Op[Field1Op, Field2Op],
+      t: VersionVector
+    ) {
+      (
+        union.isEnabled(op) &&
+        // There is a conflict to resolve
+        union.field1.isVisible() &&
+        union.field2.isVisible() &&
+        (
+          (op == new ChooseAlt1[Field1Op, Field2Op]() &&
+            // We assume that the "losing" child CRDT do not contain
+            // any concurrent updates, so that the reset effectively
+            // makes the child log empty.
+            union.field2.child.isDefaultLog(
+              union.field2.child.reset(union.field2.log, t, true)
+            )) ||
+          (op == new ChooseAlt2[Field1Op, Field2Op]() &&
+            union.field1.child.isDefaultLog(
+              union.field1.child.reset(union.field1.log, t, true)
+            ))
+        )
+      ) =>: {
+        val chosen = union.effect(op, t)
+
+        if (op == new ChooseAlt1[Field1Op, Field2Op]()) {
+          chosen.read().values == new Set[Alt2Value[Field1Value, Field2Value]]().add(
+            new Alt1[Field1Value, Field2Value](
+              chosen.field1.child.applyRead(chosen.field1.log)
+            )
+          )
+        } else {
+          chosen.read().values == new Set[Alt2Value[Field1Value, Field2Value]]().add(
+            new Alt2[Field1Value, Field2Value](
+              chosen.field2.child.applyRead(chosen.field2.log)
+            )
+          )
+        }
+      }
+    }
+  }
+}

@@ -512,6 +512,39 @@ class ProofTests extends FlatSpec with Prover {
   }
 
   ////////////////////////////////////////
+  // Pure Op-based Union CRDT //
+  ////////////////////////////////////////
+
+  "PureUnion2" should "converge" in {
+    val union = ("PureUnion2", "Record2_converges")
+    prove(union)
+  }
+
+  it should "be a resettable CRDT" in {
+    val proofs = List(
+      ("PureUnion2", "update_reset"),
+      ("PureUnion2", "reset_reset"),
+    )
+    proofs.foreach(proof => prove(proof))
+  }
+
+  it should "allow only concurrent updates to create type conflicts" in {
+    val proof = (
+      "PureUnion2",
+      "local_enabled_operation_cannot_create_type_conflict"
+    )
+    prove(proof)
+  }
+
+  it should "read one value immediately after a choice" in {
+    val proof = (
+      "PureUnion2",
+      "choose_reads_single_value"
+    )
+    prove(proof)
+  }
+
+  ////////////////////////////////////////
   // Pure Op-based Update-Wins Labeled MultiDiGraph CRDT //
   ////////////////////////////////////////
 

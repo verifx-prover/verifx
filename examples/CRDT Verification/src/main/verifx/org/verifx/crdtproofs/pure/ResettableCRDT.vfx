@@ -81,7 +81,9 @@ class ResettableChild[Log, Op, Val](
   // Returns an empty log
   empty: Log,
   // Read the value from the log.
-  readFn: Log => Val
+  readFn: Log => Val,
+  // Returns true if an operation may be applied to the current child log.
+  isEnabledFn: (Log, Op) => Boolean = (log: Log, op: Op) => true,
 ) {
   def effect(log: Log, op: Op, t: VersionVector): Log =
     this.effectFn(log, op, t)
@@ -91,6 +93,9 @@ class ResettableChild[Log, Op, Val](
 
   def isDefaultLog(log: Log): Boolean =
     this.isDefaultFn(log)
+
+  def isEnabled(log: Log, op: Op): Boolean =
+    this.isEnabledFn(log, op)
 
   def applyRead(log: Log): Val =
     this.readFn(log)
