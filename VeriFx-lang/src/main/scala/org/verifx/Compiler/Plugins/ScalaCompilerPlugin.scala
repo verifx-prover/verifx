@@ -416,7 +416,7 @@ class ScalaCompilerPlugin extends Plugin[ScalaExp, ScalaExp, ClassTable] {
       ctrait <- makeTraitDef(List("sealed"), name, tparams.map(tparam => s"+$tparam"), List(), None)
       ctorDefsAndTParams <- ctors traverse {
         case Plugin.EnumCtor(ctorName, _, fields) => {
-          val enumType = s"$name[${tparams.mkString(", ")}]"
+          val enumType = if (tparams.isEmpty) name else s"$name[${tparams.mkString(", ")}]"
           makeClassDef(List(), ctorName, tparams, fields, List(), List(), Some(enumType)) map {
             case compiledClass => (compiledClass, tparams)
           }
