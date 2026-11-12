@@ -24,6 +24,19 @@ class EnumTest extends FlatSpec {
     assert(ProgramCompiler(enumeration2).compileToLanguage(new ScalaCompilerPlugin)._2 != "")
   }
 
+  it should "compile to valid Scala without type parameters" in {
+    val enumeration =
+      """object Mode_enum {
+        |  enum Mode {
+        |    On() | Off()
+        |  }
+        |}""".stripMargin
+
+    val scalaCode = ProgramCompiler(enumeration).compileToLanguage(new ScalaCompilerPlugin)._2
+    assert(scalaCode.contains("case class On() extends Mode "))
+    assert(!scalaCode.contains("Mode[]"))
+  }
+
   it should "support type casts" in {
     // We should be able to type cast an enumeration type to a specific data constructor
     val correctTypeCast1 =
