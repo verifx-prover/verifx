@@ -21,8 +21,11 @@ object ScalaCompilerPlugin {
    * @param classesAndTraits Maps class names to the corresponding class.
    * @param enumParams Maps data constructors of enumerations to the list of type parameters.
    *                   Unused type parameters are replaced by the `Nothing` type.
+   * @param currentFile The file being compiled (as `pkg.file`) and the classes and traits defined before it.
+   * @param fileDefs Maps files (as `pkg.file`) to the classes and traits they define, for imports.
    */
-  final case class ClassTable(classesAndTraits: Map[String, Clazz] = Map(), enumParams: Map[String, List[String]] = Map())
+  final case class ClassTable(classesAndTraits: Map[String, Clazz] = Map(), enumParams: Map[String, List[String]] = Map(),
+                              currentFile: Option[(String, Set[String])] = None, fileDefs: Map[String, List[String]] = Map())
 
   sealed trait ScalaExp
   case class Method(mods: List[ScalaExp], name: String, tparams: List[ScalaExp], args: List[Plugin.Arg[ScalaExp]], body: ScalaExp, retTpe: ScalaExp) extends ScalaExp {
@@ -468,12 +471,22 @@ class ScalaCompilerPlugin extends Plugin[ScalaExp, ScalaExp, ClassTable] {
          |}""".stripMargin
   }
 
-  def makeImport(pkg: String): State[ClassTable, ScalaExp] = State.pure(s"import $pkg")
+  // A VeriFx import refers to a file and makes all its definitions visible, so import all of them
+  def makeImport(pkg: String): State[ClassTable, ScalaExp] = State.inspect {
+    case s => s.fileDefs.get(pkg) match {
+      case Some(defs) if defs.nonEmpty => s"import ${pkg.substring(0, pkg.lastIndexOf('.'))}.{${defs.mkString(", ")}}"
+      case _ => s"import $pkg"
+    }
+  }
 
   // ignore logical variables because we don't compile quantified formulas to Scala
   def makeLogicVar(name: String, tpe: ScalaExp): State[ClassTable, ScalaExp] = State.pure("")
 
-  def startFile(maybePath: Option[String]): State[ClassTable, ScalaExp] = State.pure {
+  def startFile(maybePath: Option[String]): State[ClassTable, ScalaExp] = State {
+    case s => (s.copy(currentFile = maybePath.map(path => (ProjectCompiler.filePathToPkg(path), s.classesAndTraits.keySet))), startFileCode(maybePath))
+  }
+
+  private def startFileCode(maybePath: Option[String]): ScalaExp = {
     import org.verifx.Utilities.Utils.RichString
 
     maybePath match {
@@ -490,7 +503,14 @@ class ScalaCompilerPlugin extends Plugin[ScalaExp, ScalaExp, ClassTable] {
     }
   }
 
-  def endFile(): State[ClassTable, ScalaExp] = State.pure("")
+  // Remember which classes and traits this file defined, so that imports of it can name them
+  def endFile(): State[ClassTable, ScalaExp] = State {
+    case s => s.currentFile match {
+      case Some((file, defsBefore)) =>
+        (s.copy(currentFile = None, fileDefs = s.fileDefs + (file -> (s.classesAndTraits.keySet -- defsBefore).toList.sorted)), "")
+      case None => (s, "")
+    }
+  }
 
   def run(compiler: State[ClassTable, List[ScalaExp]], initialState: Option[ClassTable]): (ClassTable, String) = {
     val state = initialState.getOrElse(ClassTable())
